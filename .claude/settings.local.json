@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout:*)",
+      "Bash(npm start)",
+      "Bash(ping:*)",
+      "Bash(set PORT=3001)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(powershell -Command \"Remove-Item -Recurse -Force ''C:\\Users\\YusufYalnizligi\\Desktop\\garden\\yedekk\\client\\.git'' -ErrorAction SilentlyContinue\")",
+      "Bash(git reset:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,2157 @@
+/* =========== GENEL =========== */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
+  background: #f5f7fb;
+  color: #222;
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 12px 40px;
+}
+
+/* =========== HEADER =========== */
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  margin-bottom: 16px;
+}
+
+.header-left h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.header-left .muted {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+ 
+/* =========== BUTONLAR =========== */
+
+.btn {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: #e5e7eb;
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s;
+}
+
+.btn:hover {
+  background: #d1d5db;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn.primary {
+  background: #4f46e5;
+  color: #ffffff;
+}
+
+.btn.primary:hover {
+  background: #4338ca;
+}
+
+.btn.danger {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.btn.danger:hover {
+  background: #dc2626;
+}
+
+.btn.icon-btn .btn-icon {
+  font-size: 1rem;
+}
+
+ 
+
+/* =========== KART, FORM, METİN =========== */
+
+.card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  margin-bottom: 12px;
+}
+
+.form-card label {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.form-card input[type='text'],
+.form-card input[type='number'],
+.form-card input[type='password'],
+.form-card input[type='file'],
+.form-card textarea,
+.month-select,
+select {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  margin-top: 4px;
+  outline: none;
+  transition: border 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-card input:focus,
+.form-card textarea:focus,
+.month-select:focus,
+select:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 1px rgba(79, 70, 229, 0.25);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.error-text {
+  color: #b91c1c;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+ 
+
+/* =========== LOGIN =========== */
+
+.auth-container {
+  max-width: 360px;
+  margin: 80px auto;
+  text-align: center;
+}
+
+.auth-container h2 {
+  margin-bottom: 16px;
+}
+
+/* =========== TABLAR =========== */
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tab {
+  border: none;
+  background: transparent;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-radius: 999px 999px 0 0;
+  color: #6b7280;
+}
+
+.tab.active {
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  border-bottom: none;
+}
+
+/* =========== HAVA DURUMU INLINE =========== */
+
+.weather-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #111827;
+}
+
+.weather-main-row,
+.weather-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.w-icon {
+  font-size: 1.2rem;
+}
+
+.w-temp {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.w-item {
+  color: #4b5563;
+}
+
+/* =========== SECTION HEADER =========== */
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.section-header h2,
+.section-header h3 {
+  margin: 0;
+}
+
+/* =========== CARD GRID (Ağaç & Sebze 6’lı) =========== */
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 1100px) {
+  .cards-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-right {
+    align-items: flex-start;
+  }
+}
+
+.tree-card {
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.tree-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+.tree-card-image-wrapper {
+  width: 100%;
+  height: 140px;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tree-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.tree-card-body {
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tree-card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.tree-card-header-row h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.tree-card-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.tree-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.tree-card-note {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+/* Ağaç / sebze kartı ilerleme etiketi */
+.tree-progress-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.tree-progress-pill-done {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+/* =========== MODAL =========== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px 18px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.4);
+}
+
+.modal-form {
+  max-width: 700px;
+}
+
+.modal h2 {
+  margin-top: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* =========== Ay Bazlı Bakım Formu =========== */
+
+.months-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.month-item {
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 6px 8px;
+  background: #f9fafb;
+}
+
+.month-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+/* Resim önizleme */
+
+.form-image-preview {
+  margin-top: 6px;
+}
+
+.form-image-preview img {
+  max-width: 100%;
+  max-height: 160px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+/* =========== Bakım Listesi =========== */
+
+.maintenance-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+
+.maintenance-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.05s ease;
+}
+
+.maintenance-item:hover {
+  background: #eef2ff;
+  transform: translateY(-1px);
+}
+
+.maintenance-item.important {
+  border-left: 3px solid #f97316;
+}
+
+.maintenance-item.completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.maintenance-month-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.maintenance-task {
+  flex: 1;
+}
+
+.maintenance-check {
+  font-size: 1rem;
+}
+
+.maintenance-empty {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* Bu ay box */
+
+.this-month-box {
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: #eef2ff;
+  margin: 8px 0 10px;
+  font-size: 0.88rem;
+}
+
+.this-month-box h4 {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+}
+
+.this-month-done {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  font-size: 0.8rem;
+  color: #16a34a;
+}
+
+/* =========== Hatırlatmalar Grid =========== */
+
+.reminders-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.reminder-card-tree {
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.1s ease;
+}
+
+.reminder-card-tree:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-header-row h3 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.notify-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+/* =========== Month Select (Modern) =========== */
+
+.month-select {
+  max-width: 180px;
+  font-size: 0.9rem;
+  background: #f9fafb;
+}
+
+/* =========== Takvim Sayfası =========== */
+
+.calendar-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.calendar-section h2 {
+  margin: 0 0 8px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .calendar-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .calendar-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.month-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 8px 10px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.month-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+}
+
+.month-card-empty {
+  background: #f9fafb;
+  color: #6b7280;
+}
+
+.month-card-current {
+  border: 1px solid #4f46e5;
+}
+
+.month-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.month-card-name {
+  font-weight: 600;
+}
+
+.month-card-badge {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.month-card-text {
+  margin: 0;
+}
+
+.month-card-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.month-card-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+
+.month-card-percent {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #166534;
+}
+
+/* =========== Home Sayfası =========== */
+
+.home-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.home-header-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.home-card {
+  flex: 1;
+  min-width: 240px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+  padding: 10px 12px;
+}
+
+.home-card h2,
+.home-card h3 {
+  margin: 0 0 6px;
+}
+
+.home-date-line {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+}
+
+.home-stats-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 0.9rem;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 700px) {
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========== Küçük şeyler =========== */
+
+main {
+  margin-top: 8px;
+}
+/* =========== Rapor Tablosu =========== */
+
+ 
+
+.report-table th,
+.report-table td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.report-table th {
+  font-weight: 600;
+  background: #f9fafb;
+}
+
+.report-table tfoot td {
+  font-weight: 600;
+  border-top: 2px solid #e5e7eb;
+}
+/* =========== Home Progress Grafik =========== */
+
+.home-progress {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-progress-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+.home-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.home-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+  transition: width 0.25s ease-out;
+}
+/* =========== Mobil Uyum Ekleri =========== */
+
+/* 600px ve altı: telefon portre görünümü */
+@media (max-width: 600px) {
+  /* Uygulama genel padding biraz daralsın */
+  .app {
+    padding: 8px 8px 24px;
+  }
+
+  /* Login ekranı çok aşağıda kalmasın */
+  .auth-container {
+    margin: 40px auto;
+    padding: 0 8px;
+  }
+
+  /* Header içindeki butonlar ve bilgiler alt alta daha rahat dizilsin */
+  .user-controls-row {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  /* Sekmeler (Tabs) taşmasın, yatay scroll/scrollable chip gibi olsun */
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+
+  .tab {
+    flex: 0 0 auto;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  /* Hatırlatmalar grid: 4 sütun dokunması zor, mobilde tek sütun */
+  .reminders-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Ay bazlı bakım formunda 3 sütun yerine 2 sütun olsun */
+  .months-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Modal daha “bottom sheet” gibi olsun, mobilde daha okunabilir */
+  .modal-overlay {
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: none;
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 16px 16px 0 0;
+    padding: 14px 14px 18px;
+  }
+}
+
+/* 400px ve altı: çok küçük ekranlar (eski telefonlar vs.) */
+@media (max-width: 400px) {
+  /* Ay bazlı bakım formu tek sütun */
+  .months-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Kart içi fontlar çok hafif küçülebilir (isteğe bağlı) */
+  .tree-card-header-row h3 {
+    font-size: 0.9rem;
+  }
+
+  .tree-card-note {
+    font-size: 0.78rem;
+  }
+}
+.report-table-wrapper {
+  width: 100%;
+  overflow-x: auto;      /* 🔥 dar ekranda yatay kaydırma */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tablo genişliğini biraz sabitle ki daralınca bozulmasın */
+.report-table {
+  width: 100%;
+  min-width: 640px;      /* mobilde taşarsa wrapper içinde scroll olacak */
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin-top: 8px;
+}
+.month-card-subline {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #4b5563;
+}
+/* =========== Bakım Etiketleri =========== */
+
+.maintenance-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.maintenance-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Türlere göre renkler */
+.maintenance-tag-budama {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.maintenance-tag-ilac {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.maintenance-tag-gubre {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.maintenance-tag-sulama {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.maintenance-tag-hasat {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.maintenance-tag-genel {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+/* Modal içindeki uzun görev metni için */
+.maintenance-task {
+  font-size: 0.85rem;
+}
+
+/* Hatırlatmalar kartı içindeki satır için */
+.maintenance-task-inline {
+  font-size: 0.8rem;
+}
+.help-text {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+ 
+ 
+
+/* =========== HOME GRAFİKLERİ =========== */
+
+.home-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.chart-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 260px;
+  margin: 12px auto 0 auto;
+}
+
+.chart-wrapper canvas {
+  width: 100% !important;
+}
+
+/* 🍩 Donut = tam yuvarlak */
+.chart-wrapper-donut canvas {
+  aspect-ratio: 1 / 1;
+  height: auto !important;
+}
+
+/* 📊 Bar = daha yüksek dikdörtgen */
+.chart-wrapper-bar canvas {
+  height: 260px !important;
+}
+
+.chart-center-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: #1f2937;
+}
+/* Mobil cihazlar */
+@media (max-width: 768px) {
+  .home-charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .chart-wrapper canvas {
+    height: 260px !important;
+  }
+
+  .chart-wrapper-bar canvas {
+    height: 230px !important;
+  }
+}
+
+ /* =========== Otomatik Bakım Öneri Sistemi =========== */
+
+.suggestions-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.suggestion-item {
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 8px 10px;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.suggestion-item.important {
+  border-color: #f97316;
+  background: #fff7ed;
+}
+
+.suggestion-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+}
+
+.suggestion-kind-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  font-size: 0.75rem;
+}
+
+.suggestion-name {
+  font-weight: 600;
+}
+
+.suggestion-month {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.suggestion-important-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 0.7rem;
+}
+
+.suggestion-task-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.suggestion-task-type {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.7rem;
+}
+
+.suggestion-task-text {
+  color: #374151;
+}
+
+.suggestion-category-row {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+
+.suggestion-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  gap: 8px;
+}
+
+.suggestion-complete-btn {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+
+/* Kategoriye göre hafif arka plan tonu */
+.suggestion-item.suggestion-past {
+  background: #fef2f2;
+}
+
+.suggestion-item.suggestion-future {
+  background: #eff6ff;
+}
+
+@media (max-width: 600px) {
+  .suggestion-month {
+    margin-left: 0;
+  }
+}
+.section-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.secondary-btn {
+  background: #e5e7eb;
+  color: #111827;
+  border-color: #e5e7eb;
+}
+.history-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 100px 120px 1fr 70px 100px;
+  gap: 8px;
+  font-size: 0.85rem;
+  align-items: center;
+}
+
+.history-type {
+  font-weight: bold;
+  color: #1d4ed8;
+}
+
+.history-name {
+  font-weight: 600;
+}
+
+.history-task {
+  color: #374151;
+}
+
+.history-month {
+  text-align: center;
+  color: #6b7280;
+}
+
+.history-date {
+  text-align: right;
+  color: #6b7280;
+}
+
+@media (max-width: 700px) {
+  .history-item {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+}
+/* ==== Raporlar sayfası düzeni ==== */
+
+.reports-page {
+   
+  margin: 0 auto;
+}
+
+.report-card {
+  margin-bottom: 24px;
+}
+
+.report-header {
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.report-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-month-select {
+  width: 180px;           /* 🔹 Artık dropdown geniş değil */
+}
+
+/* Export ve aksiyon butonları */
+.report-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.report-actions-row .btn {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+/* Grafikler alanı */
+.report-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.report-chart-card h4 {
+  margin-bottom: 4px;
+}
+
+.chart-wrapper-sm {
+  height: 260px;
+}
+
+/* Donut merkez yazısı */
+.chart-center-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+/* Rapor tablosu ufak kozmetik */
+.report-table-wrapper {
+  margin-top: 12px;
+}
+
+.report-table th,
+.report-table td {
+  text-align: center;
+}
+.suggestion-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  gap: 8px;
+}
+
+.suggestion-complete-btn {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+/* Hava durumu + saat yan yana */
+.weather-clock-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-right: 20px;
+}
+
+/* Saat kutusu */
+.clock-box {
+  padding: 6px 10px;
+  background: #eef2ff;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+
+/* Header right düzeltilmiş hizalama */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+/* Buton grubu */
+.user-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* =========== Ayarlar Sayfası =========== */
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.settings-status {
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.settings-section {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-section h3 {
+  margin: 0;
+}
+
+.settings-section-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 8px;
+}
+
+.settings-item-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.settings-item-desc {
+  font-size: 0.8rem;
+  color: #4b5563;
+  margin-top: 2px;
+}
+
+.settings-select {
+  min-width: 160px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  background: #f9fafb;
+}
+
+.settings-message {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #2563eb;
+}
+
+/* Toggle switch */
+/* Toggle switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 22px;
+  font-size: 0; /* iç boşluk yazı vs. olmasın */
+}
+
+.settings-item > .switch {
+  flex-shrink: 0; /* sağdaki switch taşmasın, esnemesin */
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #e5e7eb;
+  transition: 0.2s;
+  border-radius: 999px;
+}
+
+.slider:before {
+  position: absolute;
+  content: '';
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #ffffff;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+  background-color: #4f46e5;
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.app-logo {
+  width:  150px;
+  object-fit: contain;
+}
+.logo-box:hover {
+  opacity: 0.85;
+  transition: 0.2s;
+}
+/* Tab transition */
+.tab-panel {
+  animation: tabFadeSlide 0.18s ease-out;
+}
+
+@keyframes tabFadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* =========== HAVA DURUMU SAYFASI (GENİŞ PANEL) =========== */
+
+.weather-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.weather-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.weather-page-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.weather-date-time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.weather-city-select {
+  min-width: 140px;
+}
+
+.weather-main-grid {
+  align-items: stretch; /* grid satır yüksekliği ortak olsun */
+}
+
+/* Sol panel tam yüksekliği kaplasın */
+.weather-main-panel {
+  height: 100%;
+}
+
+/* Sağ kolon da satırın tamamını kaplasın */
+.weather-side-column {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Saatlik tahmin kartı kolonun tamamına yayılsın */
+.weather-hourly-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Grafik alanı kartın içini doldursun, min. bir yükseklik kalsın */
+.weather-hourly-chart-wrapper {
+  flex: 1;
+  min-height: 220px;
+  height: 100%;
+}
+
+@media (max-width: 1024px) {
+  .weather-main-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.weather-main-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.3fr);
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+@media (max-width: 900px) {
+  .weather-main-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.weather-main-left {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.weather-main-temp-value {
+  font-size: 2.8rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.weather-main-feels {
+  margin-top: 4px;
+  font-size: 0.95rem;
+  color: #4b5563;
+}
+
+.weather-main-desc {
+  margin-top: 4px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #111827;
+  text-transform: capitalize;
+}
+
+.weather-main-extra {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.weather-main-extra span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+.weather-main-sun {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85rem;
+}
+
+.weather-main-sun .label {
+  color: #6b7280;
+}
+
+.weather-main-sun .value {
+  font-weight: 600;
+  color: #111827;
+}
+
+.weather-main-uv {
+  margin-top: 4px;
+}
+
+.uv-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.uv-value {
+  font-weight: 600;
+}
+
+.uv-band {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: linear-gradient(
+    to right,
+    #22c55e,
+    #eab308,
+    #f97316,
+    #ef4444,
+    #7c2d12
+  );
+}
+
+.uv-band-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f9fafb;
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.6);
+}
+
+.uv-low {
+  filter: saturate(0.7) brightness(1.05);
+}
+
+.uv-moderate {
+  filter: saturate(1);
+}
+
+.uv-high {
+  filter: saturate(1.1) brightness(0.98);
+}
+
+.uv-very-high,
+.uv-extreme {
+  filter: saturate(1.2) brightness(0.95);
+}
+
+.uv-none {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+/* Rüzgar pusulası */
+
+.weather-main-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.weather-wind-card {
+  padding: 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+.card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.card-sub {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.weather-compass {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  margin: 0 auto;
+}
+
+.weather-compass-circle {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 2px solid #e5e7eb;
+}
+
+.weather-compass-arrow-wrapper {
+  position: absolute;
+  inset: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.weather-compass-arrow {
+  width: 60%;
+  height: 2px;
+  border-radius: 999px;
+  background: #0f172a;
+  transform-origin: 100% 50%;
+  transition: transform 0.2s ease-out;
+}
+
+.weather-compass-label {
+  position: absolute;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.weather-compass-label.n {
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.weather-compass-label.s {
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.weather-compass-label.e {
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.weather-compass-label.w {
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* AQI kartı */
+
+.weather-aqi-card {
+  padding: 12px;
+  border-radius: 10px;
+  background: #fefce8;
+  border: 1px solid #facc15;
+}
+
+.aqi-badge {
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.aqi-good {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.aqi-fair {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.aqi-moderate {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.aqi-poor {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.aqi-very-poor {
+  background: #fecaca;
+  color: #7f1d1d;
+}
+
+.aqi-unknown {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+.weather-aqi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.8rem;
+}
+
+.weather-aqi-item .label {
+  color: #6b7280;
+}
+
+.weather-aqi-item .value {
+  font-weight: 600;
+}
+
+/* Saatlik grafik */
+
+.weather-side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.weather-hourly-card {
+  padding: 12px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+ 
+
+/* Haftalık tahmin */
+
+.weather-week-card {
+  margin-top: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.weather-week-grid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+
+@media (max-width: 900px) {
+  .weather-week-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .weather-week-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.weather-week-day {
+  padding: 8px;
+  border-radius: 10px;
+  background: #f9fafb;
+}
+
+.weather-week-day-name {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.weather-week-temp {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.weather-week-temp .max {
+  font-weight: 600;
+}
+
+.weather-week-temp .min {
+  color: #6b7280;
+}
+
+.weather-week-pop,
+.weather-week-uv,
+.weather-week-desc {
+  margin-top: 2px;
+  color: #6b7280;
+}
+.weather-wind-info {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: #4b5563;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+/* Sağ kolon panel yüksekliğini tamamen kullansın */
+.weather-main-right {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Rüzgar kartı sağ kolonu tamamen doldursun */
+.weather-wind-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* istersen tam ortaya hizalar */
+}
+@media (max-width: 768px) {
+  .weather-clock-row {
+    display: none;
+  }
+}
+/* Mobil dropdown varsayılan olarak gizli (sadece media query'de açıyoruz) */
+.tabs-mobile-select-wrapper {
+  display: none;
+}
+
+/* Dropdown görünümü */
+.tabs-mobile-select {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+/* 768px ve altı: sekme butonlarını gizle, menüyü göster */
+@media (max-width: 768px) {
+  nav.tabs {
+    display: none;
+  }
+
+  .tabs-mobile-select-wrapper {
+    display: block;
+    margin-bottom: 10px;
+  }
+}
+/* Tabs & hamburger genel */
+.tabs-wrapper {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+ 
+
+.tabs-mobile-menu {
+  display: none; /* mobil media query'de açılacak */
+}
+
+.tabs-mobile-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tabs-mobile-item {
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.tabs-mobile-item.active {
+  background: #e5f0ff;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+/* Mobil görünüm */
+@media (max-width: 768px) {
+  /* Tab bar mobilde tamamen gizlensin */
+  nav.tabs {
+    display: none;
+  }
+
+  /* Hamburger butonu mobilde görünsün */
+  
+
+  /* Mobil açılır menü */
+  .tabs-mobile-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 8px;
+    border-radius: 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+  }
+
+  /* Desktop header'daki Çıkış / Bildirim satırını mobilde gizle */
+  .user-controls-row {
+    display: none;
+  }
+
+  /* Hamburger menünün en altındaki Çıkış / Bildirim blokları */
+  .tabs-mobile-footer {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .tabs-mobile-footer .btn.icon-btn {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+.tabs-hamburger {
+  display: none; /* desktop'ta gizli */
+  border: none;
+  background: #f3f4f6;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+@media (max-width: 768px) {
+  /* Tab bar mobilde tamamen gizlensin */
+  nav.tabs {
+    display: none;
+  }
+
+  /* Hamburger butonu mobilde sağ üstte görünsün */
+  .tabs-hamburger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Desktop header'daki Çıkış / Bildirim satırını mobilde gizle */
+  .user-controls-row {
+    display: none;
+  }
+
+  /* Mobil açılır menü (sekme listesi + footer) */
+  .tabs-mobile-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 8px;
+    border-radius: 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+  }
+
+  .tabs-mobile-items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .tabs-mobile-item {
+    text-align: left;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+
+  .tabs-mobile-item.active {
+    background: #e5f0ff;
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+
+  .tabs-mobile-footer {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .tabs-mobile-footer .btn.icon-btn {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+/* Mobilde logo + hamburger aynı satırda, hamburger sağda olsun */
+@media (max-width: 768px) {
+  /* Logo kartının class'ı neyse onu kullan.
+     Eğer sende farklıysa (.app-header-card / .brand-card vs.),
+     buradaki .app-header-left'i o class ile değiştir. */
+  .app-header-left {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .app-header-left img {
+    max-height: 48px;       /* logo çok büyüksa biraz kısıyor */
+    height: auto;
+  }
+
+  .tabs-hamburger {
+    display: inline-flex;   /* zaten görünüyor ama garanti olsun */
+    margin-left: auto;      /* logodan sonra sağ tarafa it */
+  }
+}
+.mobile-header-info {
+  display: none;
+}
+
+/* Mobilde göster */
+@media (max-width: 900px) {
+  .header-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .mobile-header-info {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 0.8rem;
+    color: #111827;
+    gap: 4px;
+  }
+}
+ 
