@@ -4,7 +4,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "node server.js"
   },
   "dependencies": {
     "axios": "^1.13.2",
@@ -15,6 +15,7 @@
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^7.6.3",
     "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
     "nodemailer": "^6.9.0",
     "web-push": "^3.6.7"
   },

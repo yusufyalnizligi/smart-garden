@@ -10,12 +10,22 @@ const path = require('path');
 const axios = require('axios');
 const webpush = require('web-push');
 const fs = require('fs');
+const cron = require('node-cron');
 
 const app = express();
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 /* -------------------- CORS -------------------- */
+const allowedOrigins = [
+  'https://oguzemrecakil.com.tr',
+  'http://localhost:3001',
+  'http://localhost:3000'
+];
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://oguzemrecakil.com.tr');
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header(
     'Access-Control-Allow-Methods',
     'GET, POST, PUT, DELETE, PATCH, OPTIONS'
@@ -27,7 +37,13 @@ app.use((req, res, next) => {
 
 app.use(
   cors({
-    origin: 'https://oguzemrecakil.com.tr',
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
@@ -177,12 +193,80 @@ const vegetableSchema = new mongoose.Schema(
 
 const adminSchema = new mongoose.Schema({
   username: { type: String, unique: true, required: true },
-  passwordHash: { type: String, required: true }
-});
+  passwordHash: { type: String, required: true },
+  email: { type: String, default: '' },
+
+  // AYARLAR - Tüm kullanıcı ayarları burada saklanır
+  settings: {
+    // Bildirim & Hatırlatma Ayarları
+    notifications: {
+      emailEnabled: { type: Boolean, default: true },
+      pushEnabled: { type: Boolean, default: true },
+      reminderTime: { type: String, default: '08:00' },
+      weeklyDigest: { type: Boolean, default: false },
+      criticalTaskAlerts: { type: Boolean, default: true }
+    },
+
+    // Görünüm & Tema Ayarları
+    appearance: {
+      theme: { type: String, default: 'light' }, // light, dark, auto
+      colorScheme: { type: String, default: 'green' }, // green, blue, brown, purple
+      fontSize: { type: String, default: 'medium' }, // small, medium, large
+      viewMode: { type: String, default: 'card' }, // card, list
+      chartsDefaultOpen: { type: Boolean, default: true }
+    },
+
+    // Hatırlatma Tercihleri
+    reminders: {
+      treeOnlyImportantDefault: { type: Boolean, default: false },
+      vegOnlyImportantDefault: { type: Boolean, default: false },
+      autoOpenSuggestions: { type: Boolean, default: true }
+    },
+
+    // Hava Durumu Ayarları
+    weather: {
+      city: { type: String, default: 'Elazig' },
+      unit: { type: String, default: 'metric' }, // metric, imperial
+      updateFrequency: { type: Number, default: 30 }, // dakika
+      rainAlerts: { type: Boolean, default: true },
+      heatAlerts: { type: Boolean, default: true },
+      heatThreshold: { type: Number, default: 30 }, // Celsius
+      frostAlerts: { type: Boolean, default: true }
+    },
+
+    // Bakım Planlama Ayarları
+    maintenance: {
+      defaultWateringFrequency: { type: Number, default: 7 }, // gün
+      defaultFertilizingPeriod: { type: Number, default: 30 }, // gün
+      autoTaskCreation: { type: Boolean, default: true },
+      harvestReminders: { type: Boolean, default: true }
+    },
+
+    // Tarih & Saat Formatları
+    ui: {
+      dateFormat: { type: String, default: 'dd.MM.yyyy' },
+      timeFormat: { type: String, default: 'HH:mm' }
+    },
+
+    // Profil & Kişiselleştirme
+    profile: {
+      gardenName: { type: String, default: '' },
+      gardenSize: { type: Number, default: 0 }, // m²
+      experienceLevel: { type: String, default: 'beginner' }, // beginner, intermediate, advanced
+      location: {
+        lat: { type: Number, default: 0 },
+        lng: { type: Number, default: 0 }
+      }
+    }
+  }
+}, { timestamps: true });
 
 const pushSubscriptionSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
-  subscription: { type: Object, required: true }
+  subscription: { type: Object, required: true },
+  browser: { type: String, default: 'unknown' }, // chrome, firefox, safari, edge, opera, unknown
+  userAgent: { type: String, default: '' },
+  createdAt: { type: Date, default: Date.now }
 });
 
 const Tree = mongoose.model('Tree', treeSchema);
@@ -210,6 +294,159 @@ function authMiddleware(req, res, next) {
     return res.status(401).json({ message: 'Token geçersiz veya süresi dolmuş.' });
   }
 }
+
+/* -------------------- SETTINGS API -------------------- */
+
+// Kullanıcının ayarlarını getir
+app.get('/api/settings', authMiddleware, async (req, res) => {
+  try {
+    const admin = await Admin.findById(req.user.id);
+    if (!admin) {
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+    }
+
+    // Eğer settings yoksa varsayılan değerleri döndür
+    if (!admin.settings) {
+      const defaultSettings = {
+        notifications: {
+          emailEnabled: true,
+          pushEnabled: true,
+          reminderTime: '08:00',
+          weeklyDigest: false,
+          criticalTaskAlerts: true
+        },
+        appearance: {
+          theme: 'light',
+          colorScheme: 'green',
+          fontSize: 'medium',
+          viewMode: 'card',
+          chartsDefaultOpen: true
+        },
+        reminders: {
+          treeOnlyImportantDefault: false,
+          vegOnlyImportantDefault: false,
+          autoOpenSuggestions: true
+        },
+        weather: {
+          city: 'Elazig',
+          unit: 'metric',
+          updateFrequency: 30,
+          rainAlerts: true,
+          heatAlerts: true,
+          heatThreshold: 30,
+          frostAlerts: true
+        },
+        maintenance: {
+          defaultWateringFrequency: 7,
+          defaultFertilizingPeriod: 30,
+          autoTaskCreation: true,
+          harvestReminders: true
+        },
+        ui: {
+          dateFormat: 'dd.MM.yyyy',
+          timeFormat: 'HH:mm'
+        },
+        profile: {
+          gardenName: '',
+          gardenSize: 0,
+          experienceLevel: 'beginner',
+          location: { lat: 0, lng: 0 }
+        }
+      };
+
+      // Varsayılan ayarları kaydet
+      admin.settings = defaultSettings;
+      await admin.save();
+      return res.json(defaultSettings);
+    }
+
+    res.json(admin.settings);
+  } catch (err) {
+    console.error('Ayarlar getirme hatası:', err);
+    res.status(500).json({ message: 'Ayarlar alınamadı' });
+  }
+});
+
+// Ayarların tamamını güncelle (tüm settings objesi)
+app.put('/api/settings', authMiddleware, async (req, res) => {
+  try {
+    const admin = await Admin.findById(req.user.id);
+    if (!admin) {
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+    }
+
+    admin.settings = req.body;
+    await admin.save();
+
+    res.json({
+      message: 'Ayarlar başarıyla güncellendi',
+      settings: admin.settings
+    });
+  } catch (err) {
+    console.error('Ayarlar güncelleme hatası:', err);
+    res.status(500).json({ message: 'Ayarlar güncellenemedi' });
+  }
+});
+
+// Tek bir ayarı güncelle (partial update)
+app.patch('/api/settings', authMiddleware, async (req, res) => {
+  try {
+    const { path, value } = req.body;
+
+    if (!path) {
+      return res.status(400).json({ message: 'path parametresi gerekli' });
+    }
+
+    const admin = await Admin.findById(req.user.id);
+    if (!admin) {
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+    }
+
+    // Mongoose dot notation ile güncelleme
+    const updateObj = {};
+    updateObj[`settings.${path}`] = value;
+
+    await Admin.findByIdAndUpdate(req.user.id, updateObj, { new: true });
+
+    // Güncel ayarları getir
+    const updatedAdmin = await Admin.findById(req.user.id);
+
+    res.json({
+      message: 'Ayar başarıyla güncellendi',
+      settings: updatedAdmin.settings
+    });
+  } catch (err) {
+    console.error('Ayar güncelleme hatası:', err);
+    res.status(500).json({ message: 'Ayar güncellenemedi' });
+  }
+});
+
+// Email güncelleme endpoint'i
+app.patch('/api/settings/email', authMiddleware, async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ message: 'Geçerli bir email adresi girin' });
+    }
+
+    const admin = await Admin.findById(req.user.id);
+    if (!admin) {
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+    }
+
+    admin.email = email;
+    await admin.save();
+
+    res.json({
+      message: 'Email başarıyla güncellendi',
+      email: admin.email
+    });
+  } catch (err) {
+    console.error('Email güncelleme hatası:', err);
+    res.status(500).json({ message: 'Email güncellenemedi' });
+  }
+});
 
 /* -------------------- Geçmiş Bakım Raporu -------------------- */
 
@@ -1479,24 +1716,49 @@ app.post('/api/push/subscribe', authMiddleware, async (req, res) => {
     }
 
     const userId = req.user.id;
-    const subscription = req.body;
+    const { browser, userAgent, ...subscription } = req.body;
 
     if (!subscription || !subscription.endpoint) {
       return res.status(400).json({ message: 'Geçersiz subscription verisi.' });
     }
 
-    console.log('Push subscribe çağrıldı. user:', userId);
+    console.log('Push subscribe çağrıldı. user:', userId, 'browser:', browser || 'unknown');
 
-    await PushSubscription.deleteMany({ user: userId });
-
-    const sub = new PushSubscription({
+    // Aynı endpoint'e sahip aboneliği bul (aynı tarayıcı/cihaz)
+    const existingSub = await PushSubscription.findOne({
       user: userId,
-      subscription
+      'subscription.endpoint': subscription.endpoint
     });
 
-    await sub.save();
+    if (existingSub) {
+      // Varolan aboneliği güncelle
+      existingSub.subscription = subscription;
+      existingSub.browser = browser || 'unknown';
+      existingSub.userAgent = userAgent || '';
+      existingSub.createdAt = new Date();
+      await existingSub.save();
+      console.log(`✓ ${browser || 'unknown'} tarayıcısı için mevcut abonelik güncellendi.`);
+    } else {
+      // Yeni abonelik oluştur
+      const sub = new PushSubscription({
+        user: userId,
+        subscription,
+        browser: browser || 'unknown',
+        userAgent: userAgent || ''
+      });
+      await sub.save();
+      console.log(`✓ ${browser || 'unknown'} tarayıcısı için yeni abonelik oluşturuldu.`);
+    }
 
-    return res.json({ message: 'Push aboneliği kaydedildi.' });
+    // Kullanıcının toplam aktif abonelik sayısını göster
+    const totalSubs = await PushSubscription.countDocuments({ user: userId });
+    console.log(`  → Kullanıcının toplam aktif aboneliği: ${totalSubs}`);
+
+    return res.json({
+      message: 'Push aboneliği kaydedildi.',
+      browser: browser || 'unknown',
+      totalSubscriptions: totalSubs
+    });
   } catch (err) {
     console.error('Push subscribe hatası:', err);
     return res
@@ -1572,7 +1834,13 @@ app.post('/api/push/send-reminders', authMiddleware, async (req, res) => {
     )}`;
 
     const subs = await PushSubscription.find({ user: userId }).lean();
-    console.log('Push subscription sayısı:', subs.length);
+    console.log(`Push subscription sayısı: ${subs.length}`);
+
+    // Hangi tarayıcılara gönderileceğini göster
+    if (subs.length > 0) {
+      const browsers = subs.map(s => s.browser || 'unknown').join(', ');
+      console.log(`  → Hedef tarayıcılar: ${browsers}`);
+    }
 
     if (!subs.length) {
       return res.json({
@@ -1592,22 +1860,27 @@ app.post('/api/push/send-reminders', authMiddleware, async (req, res) => {
     });
 
     let successCount = 0;
+    const results = [];
 
     for (const sub of subs) {
       try {
         await webpush.sendNotification(sub.subscription, payload);
         successCount++;
+        console.log(`  ✓ ${sub.browser || 'unknown'} tarayıcısına bildirim gönderildi`);
+        results.push({ browser: sub.browser, status: 'success' });
       } catch (err) {
         console.error(
-          'Tekil push gönderme hatası:',
+          `  ✗ ${sub.browser || 'unknown'} tarayıcısına gönderim hatası:`,
           err.statusCode,
           err.body || err.message
         );
+        results.push({ browser: sub.browser, status: 'failed', error: err.message });
       }
     }
 
     return res.json({
-      message: `${subs.length} aboneliğin ${successCount} tanesine push bildirimi gönderildi.`
+      message: `${subs.length} aboneliğin ${successCount} tanesine push bildirimi gönderildi.`,
+      results: results
     });
   } catch (err) {
     console.error('Push hatırlatma hatası:', err);
@@ -1690,7 +1963,13 @@ app.post(
       )}`;
 
       const subs = await PushSubscription.find({ user: userId }).lean();
-      console.log('Push subscription sayısı:', subs.length);
+      console.log(`Push subscription sayısı: ${subs.length}`);
+
+      // Hangi tarayıcılara gönderileceğini göster
+      if (subs.length > 0) {
+        const browsers = subs.map(s => s.browser || 'unknown').join(', ');
+        console.log(`  → Hedef tarayıcılar: ${browsers}`);
+      }
 
       if (!subs.length) {
         return res.json({
@@ -1710,22 +1989,27 @@ app.post(
       });
 
       let successCount = 0;
+      const results = [];
 
       for (const sub of subs) {
         try {
           await webpush.sendNotification(sub.subscription, payload);
           successCount++;
+          console.log(`  ✓ ${sub.browser || 'unknown'} tarayıcısına bildirim gönderildi (sebze)`);
+          results.push({ browser: sub.browser, status: 'success' });
         } catch (err) {
           console.error(
-            'Tekil push gönderme hatası (sebze):',
+            `  ✗ ${sub.browser || 'unknown'} tarayıcısına gönderim hatası (sebze):`,
             err.statusCode,
             err.body || err.message
           );
+          results.push({ browser: sub.browser, status: 'failed', error: err.message });
         }
       }
 
       return res.json({
-        message: `${subs.length} aboneliğin ${successCount} tanesine sebze push bildirimi gönderildi.`
+        message: `${subs.length} aboneliğin ${successCount} tanesine sebze push bildirimi gönderildi.`,
+        results: results
       });
     } catch (err) {
       console.error('Sebze push hatırlatma hatası:', err);
@@ -1830,10 +2114,209 @@ async function start() {
     app.listen(PORT, () => {
       console.log(`Server ${PORT} portunda çalışıyor.`);
     });
+
+    // Cron job'ları başlat
+    setupCronJobs();
   } catch (err) {
     console.error('Başlatma hatası:', err);
     process.exit(1);
   }
+}
+
+/* -------------------- CRON JOB'LAR (Otomatik Bakım Hatırlatmaları) -------------------- */
+
+// Tamamlanan ve tamamlanmayan görevleri raporlama fonksiyonu
+async function sendMonthlyMaintenanceReport() {
+  try {
+    console.log('📅 Aylık bakım raporu gönderiliyor...');
+
+    const currentMonth = new Date().getMonth() + 1;
+    const monthNames = [
+      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+    ];
+
+    // Tüm kullanıcıları çek
+    const admins = await Admin.find().lean();
+
+    for (const admin of admins) {
+      try {
+        // Ağaçları çek
+        const trees = await Tree.find().lean();
+        const vegetables = await Vegetable.find().lean();
+
+        // Bu ay için görevleri ayır
+        const treeCompleted = [];
+        const treeIncomplete = [];
+        const vegCompleted = [];
+        const vegIncomplete = [];
+
+        // Ağaçları kontrol et
+        trees.forEach(tree => {
+          const maintenance = tree.maintenance?.find(m => m.month === currentMonth);
+          if (maintenance) {
+            const item = `${tree.name}: ${maintenance.tasks}`;
+            if (maintenance.completed) {
+              treeCompleted.push(item);
+            } else {
+              treeIncomplete.push(item);
+            }
+          }
+        });
+
+        // Sebzeleri kontrol et
+        vegetables.forEach(veg => {
+          const maintenance = veg.maintenance?.find(m => m.month === currentMonth);
+          if (maintenance) {
+            const item = `${veg.name}: ${maintenance.tasks}`;
+            if (maintenance.completed) {
+              vegCompleted.push(item);
+            } else {
+              vegIncomplete.push(item);
+            }
+          }
+        });
+
+        // Raporu oluştur
+        const totalCompleted = treeCompleted.length + vegCompleted.length;
+        const totalIncomplete = treeIncomplete.length + vegIncomplete.length;
+        const totalTasks = totalCompleted + totalIncomplete;
+
+        if (totalTasks === 0) {
+          console.log(`  ℹ️ ${admin.username} için ${monthNames[currentMonth - 1]} ayında görev yok.`);
+          continue;
+        }
+
+        // E-posta içeriği
+        let emailHtml = `
+          <h2>🌳 ${monthNames[currentMonth - 1]} Ayı Bakım Raporu</h2>
+          <p>Merhaba,</p>
+          <p>${monthNames[currentMonth - 1]} ayına ait bakım görevlerinizin özeti:</p>
+
+          <h3>📊 Özet</h3>
+          <ul>
+            <li><strong>Toplam Görev:</strong> ${totalTasks}</li>
+            <li><strong style="color: green;">✅ Tamamlanan:</strong> ${totalCompleted}</li>
+            <li><strong style="color: orange;">⏳ Tamamlanmayan:</strong> ${totalIncomplete}</li>
+            <li><strong>Tamamlanma Oranı:</strong> ${totalTasks > 0 ? Math.round((totalCompleted / totalTasks) * 100) : 0}%</li>
+          </ul>
+        `;
+
+        // Tamamlanan Ağaçlar
+        if (treeCompleted.length > 0) {
+          emailHtml += `
+            <h3 style="color: green;">✅ Tamamlanan Ağaç Bakımları (${treeCompleted.length})</h3>
+            <ul>
+              ${treeCompleted.map(item => `<li>${item}</li>`).join('')}
+            </ul>
+          `;
+        }
+
+        // Tamamlanmayan Ağaçlar
+        if (treeIncomplete.length > 0) {
+          emailHtml += `
+            <h3 style="color: orange;">⏳ Tamamlanmayan Ağaç Bakımları (${treeIncomplete.length})</h3>
+            <ul>
+              ${treeIncomplete.map(item => `<li>${item}</li>`).join('')}
+            </ul>
+          `;
+        }
+
+        // Tamamlanan Sebzeler
+        if (vegCompleted.length > 0) {
+          emailHtml += `
+            <h3 style="color: green;">✅ Tamamlanan Sebze Bakımları (${vegCompleted.length})</h3>
+            <ul>
+              ${vegCompleted.map(item => `<li>${item}</li>`).join('')}
+            </ul>
+          `;
+        }
+
+        // Tamamlanmayan Sebzeler
+        if (vegIncomplete.length > 0) {
+          emailHtml += `
+            <h3 style="color: orange;">⏳ Tamamlanmayan Sebze Bakımları (${vegIncomplete.length})</h3>
+            <ul>
+              ${vegIncomplete.map(item => `<li>${item}</li>`).join('')}
+            </ul>
+          `;
+        }
+
+        emailHtml += `
+          <hr>
+          <p style="color: #666; font-size: 0.9em;">
+            Bu rapor otomatik olarak gönderilmiştir.<br>
+            🤖 Akıllı Bahçe Yönetim Sistemi
+          </p>
+        `;
+
+        // E-posta gönder
+        if (transporter) {
+          const toEmail = process.env.EMAIL_TO || 'oguzemrecakil10@gmail.com';
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER || 'oguzemrecakil10@gmail.com',
+            to: toEmail,
+            subject: `🌳 ${monthNames[currentMonth - 1]} Ayı Bakım Raporu - ${totalCompleted}/${totalTasks} Tamamlandı`,
+            html: emailHtml
+          });
+          console.log(`  ✅ E-posta gönderildi: ${toEmail}`);
+        }
+
+        // Push bildirimi gönder
+        const subs = await PushSubscription.find({ user: admin._id }).lean();
+        if (subs.length > 0 && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+          const pushPayload = JSON.stringify({
+            title: `🌳 ${monthNames[currentMonth - 1]} Bakım Raporu`,
+            body: `✅ ${totalCompleted} tamamlandı, ⏳ ${totalIncomplete} bekliyor (Toplam: ${totalTasks})`,
+            icon: '/icons/icon-192.png',
+            badge: '/icons/icon-192.png',
+            data: { url: '/reminders' }
+          });
+
+          let pushSuccess = 0;
+          for (const sub of subs) {
+            try {
+              await webpush.sendNotification(sub.subscription, pushPayload);
+              pushSuccess++;
+            } catch (err) {
+              console.error(`  ⚠️ Push gönderim hatası (${sub.browser}):`, err.message);
+            }
+          }
+          console.log(`  📱 Push bildirimi gönderildi: ${pushSuccess}/${subs.length} cihaz`);
+        }
+
+      } catch (err) {
+        console.error(`  ❌ ${admin.username} için rapor gönderilemedi:`, err.message);
+      }
+    }
+
+    console.log('✅ Aylık bakım raporu gönderimi tamamlandı.');
+  } catch (err) {
+    console.error('❌ Aylık bakım raporu hatası:', err);
+  }
+}
+
+// Cron job'ları ayarla
+function setupCronJobs() {
+  // Her ayın 1'inde saat 08:00'de çalış
+  cron.schedule('0 8 1 * *', () => {
+    console.log('\n⏰ Cron tetiklendi: Ayın 1. günü - Bakım raporu gönderiliyor...');
+    sendMonthlyMaintenanceReport();
+  }, {
+    timezone: 'Europe/Istanbul'
+  });
+
+  // Her ayın 15'inde saat 08:00'de çalış
+  cron.schedule('0 8 15 * *', () => {
+    console.log('\n⏰ Cron tetiklendi: Ayın 15. günü - Bakım raporu gönderiliyor...');
+    sendMonthlyMaintenanceReport();
+  }, {
+    timezone: 'Europe/Istanbul'
+  });
+
+  console.log('⏰ Cron job\'lar başlatıldı:');
+  console.log('   📅 Her ayın 1. günü saat 08:00 - Bakım raporu');
+  console.log('   📅 Her ayın 15. günü saat 08:00 - Bakım raporu');
 }
 
 start();

@@ -96,9 +96,17 @@ body {
 .card {
   background: #ffffff;
   border-radius: 16px;
-  padding: 14px 16px;
+  padding: 18px 20px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+/* Bakım Hatırlatmaları sayfası için HR ayracı */
+hr {
+  border: none;
+  height: 2px;
+  background: linear-gradient(to right, transparent, #e5e7eb 20%, #e5e7eb 80%, transparent);
+  margin: 32px 0;
 }
 
 .form-card label {
@@ -226,8 +234,28 @@ textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.section-header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.section-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.section-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .section-header h2,
@@ -390,9 +418,13 @@ textarea {
 
 .modal-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 8px;
   margin-top: 12px;
+}
+
+.modal-actions .btn.danger {
+  margin-right: auto;
 }
 
 /* =========== Ay Bazlı Bakım Formu =========== */
@@ -515,14 +547,15 @@ textarea {
 
 .reminders-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
 }
 
 .reminder-card-tree {
   cursor: pointer;
   transition: transform 0.08s ease, box-shadow 0.1s ease;
+  padding: 16px !important;
 }
 
 .reminder-card-tree:hover {
@@ -534,29 +567,59 @@ textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .card-header-row h3 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 4px 10px;
   border-radius: 999px;
   font-size: 0.75rem;
+  font-weight: 500;
   background: #e5e7eb;
   color: #374151;
+  white-space: nowrap;
 }
 
 .notify-row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-top: 4px;
+  margin-top: 12px;
+  align-items: center;
+}
+
+/* Bakım Hatırlatmaları sayfası için özel düzenlemeler */
+.card + h3 {
+  margin-top: 32px;
+  margin-bottom: 8px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.card + .card {
+  margin-top: 20px;
+}
+
+/* Bildirim kartları için ekstra padding */
+.card .section-header + .notify-row {
+  margin-top: 16px;
+}
+
+.card .notify-row + label {
+  margin-top: 12px;
 }
 
 /* =========== Month Select (Modern) =========== */
@@ -1000,21 +1063,27 @@ main {
 
 .suggestions-list {
   list-style: none;
-  margin: 8px 0 0;
+  margin: 16px 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 
 .suggestion-item {
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid #e5e7eb;
-  padding: 8px 10px;
+  padding: 14px 16px;
   background: #f9fafb;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.suggestion-item:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .suggestion-item.important {
@@ -1026,53 +1095,62 @@ main {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  font-size: 0.82rem;
+  gap: 8px;
+  font-size: 0.88rem;
 }
 
 .suggestion-kind-chip {
-  padding: 2px 8px;
+  padding: 4px 10px;
   border-radius: 999px;
   background: #e5e7eb;
   font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .suggestion-name {
   font-weight: 600;
+  font-size: 0.95rem;
+  color: #111827;
 }
 
 .suggestion-month {
   margin-left: auto;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: #6b7280;
+  font-weight: 500;
 }
 
 .suggestion-important-chip {
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 999px;
   background: #fee2e2;
   color: #b91c1c;
   font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .suggestion-task-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
 
 .suggestion-task-type {
-  padding: 1px 7px;
+  padding: 3px 10px;
   border-radius: 999px;
   background: #e0f2fe;
   color: #0369a1;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .suggestion-task-text {
   color: #374151;
+  line-height: 1.6;
 }
 
 .suggestion-category-row {
@@ -1085,13 +1163,16 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 6px;
-  gap: 8px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
+  gap: 10px;
 }
 
 .suggestion-complete-btn {
-  padding: 4px 10px;
+  padding: 6px 14px;
   font-size: 0.8rem;
+  font-weight: 500;
 }
 
 
@@ -1250,13 +1331,16 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 6px;
-  gap: 8px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
+  gap: 10px;
 }
 
 .suggestion-complete-btn {
-  padding: 4px 10px;
+  padding: 6px 14px;
   font-size: 0.8rem;
+  font-weight: 500;
 }
 /* Hava durumu + saat yan yana */
 .weather-clock-row {
@@ -2154,4 +2238,104 @@ main {
     gap: 4px;
   }
 }
- 
+
+/* =========== BAKIM PLANI TABLE STİLLERİ =========== */
+
+.maintenance-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin: 16px 0;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.maintenance-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.maintenance-table thead {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+}
+
+.maintenance-table th {
+  padding: 14px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.maintenance-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: all 0.2s ease;
+}
+
+.maintenance-table tbody tr:hover {
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.maintenance-table tbody tr.completed {
+  background: #f0fdf4;
+  opacity: 0.7;
+}
+
+.maintenance-table tbody tr.completed:hover {
+  background: #dcfce7;
+}
+
+.maintenance-table tbody tr.important {
+  background: #fef3c7;
+}
+
+.maintenance-table tbody tr.important:hover {
+  background: #fde68a;
+}
+
+.maintenance-table td {
+  padding: 14px 12px;
+  vertical-align: middle;
+}
+
+.maintenance-task-cell {
+  line-height: 1.5;
+  color: #374151;
+  max-width: 400px;
+}
+
+.maintenance-pending {
+  font-size: 1.2rem;
+  opacity: 0.5;
+}
+
+/* Responsive table için */
+@media (max-width: 768px) {
+  .maintenance-table {
+    font-size: 0.8rem;
+  }
+
+  .maintenance-table th,
+  .maintenance-table td {
+    padding: 10px 8px;
+  }
+
+  .maintenance-table th:nth-child(2),
+  .maintenance-table td:nth-child(2) {
+    display: none; /* Mobilde kategori sütununu gizle */
+  }
+
+  .maintenance-month-chip {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+
+  .maintenance-tag {
+    font-size: 0.7rem;
+    padding: 3px 6px;
+  }
+}

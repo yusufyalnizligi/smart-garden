@@ -25,8 +25,9 @@ ChartJS.register(
 );
 
 
-const API_URL = 'http://localhost:3000/api';
-// GEÇİCİ / KOLAY ÇÖZÜM: Env yerine direkt sabit key kullan
+// Environment-based configuration
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+const BASE_URL = process.env.REACT_APP_BASE_URL || 'http://localhost:3000';
 const VAPID_PUBLIC_KEY = 'BO0KSV3iyt34vxggZvjqlE_AOENpuJU19ROPkxmQHuHxpxW4QCdDBSuvHkY9Vqqz8Xil-nCjDLYBecEnr3aN1Vk';
 // -------------------- OTOMATİK BAKIM ÖNERİLERİ -------------------- //
 
@@ -1132,7 +1133,54 @@ const timeStr = now.toLocaleTimeString('tr-TR', {
 
 /* -------------------- SEBZE FORMU (POPUP İÇİN) -------------------- */
 
+// Yaygın sebze isimleri listesi
+const COMMON_VEGETABLE_NAMES = [
+  'Domates',
+  'Biber',
+  'Patlıcan',
+  'Salatalık',
+  'Kabak',
+  'Fasulye',
+  'Bezelye',
+  'Nohut',
+  'Mercimek',
+  'Bamya',
+  'Marul',
+  'Maydanoz',
+  'Dereotu',
+  'Roka',
+  'Tere',
+  'Nane',
+  'Fesleğen',
+  'Kekik',
+  'Soğan',
+  'Sarımsak',
+  'Pırasa',
+  'Havuç',
+  'Turp',
+  'Pancar',
+  'Patates',
+  'Lahana',
+  'Karnabahar',
+  'Brokoli',
+  'Ispanak',
+  'Semizotu',
+  'Pazı',
+  'Kereviz',
+  'Kabak Çiçeği',
+  'Mısır',
+  'Çilek',
+  'Kavun',
+  'Karpuz',
+  'Enginar',
+  'Bamya',
+  'Taze Soğan',
+  'Kırmızı Lahana'
+];
+
 function VegetableForm({ initialVeg, onSave, onCancel, token }) {
+  const [nameSelection, setNameSelection] = useState(''); // Dropdown seçimi
+  const [customName, setCustomName] = useState(''); // Özel isim girişi
   const [name, setName] = useState('');
   const [count, setCount] = useState(1);
   const [notes, setNotes] = useState('');
@@ -1156,7 +1204,18 @@ function VegetableForm({ initialVeg, onSave, onCancel, token }) {
 
   useEffect(() => {
     if (initialVeg) {
-      setName(initialVeg.name || '');
+      const vegName = initialVeg.name || '';
+      setName(vegName);
+
+      // Listede varsa dropdown'dan seç, yoksa "Özel" seç
+      if (COMMON_VEGETABLE_NAMES.includes(vegName)) {
+        setNameSelection(vegName);
+        setCustomName('');
+      } else {
+        setNameSelection('Özel');
+        setCustomName(vegName);
+      }
+
       setCount(typeof initialVeg.count === 'number' ? initialVeg.count : 1);
       setNotes(initialVeg.notes || '');
       setImageUrl(initialVeg.imageUrl || '');
@@ -1171,6 +1230,8 @@ function VegetableForm({ initialVeg, onSave, onCancel, token }) {
       setMonthlyTasks(tasks);
     } else {
       setName('');
+      setNameSelection('');
+      setCustomName('');
       setCount(1);
       setNotes('');
       setImageUrl('');
@@ -1179,6 +1240,15 @@ function VegetableForm({ initialVeg, onSave, onCancel, token }) {
       setCategory('genel');
     }
   }, [initialVeg]);
+
+  // nameSelection veya customName değiştiğinde name'i güncelle
+  useEffect(() => {
+    if (nameSelection === 'Özel') {
+      setName(customName);
+    } else if (nameSelection) {
+      setName(nameSelection);
+    }
+  }, [nameSelection, customName]);
   
   const handleRemoveImage = async () => {
     // Yeni eklenen (daha kaydedilmemiş) sebzede sadece local bilgiyi sil
@@ -1231,40 +1301,54 @@ function VegetableForm({ initialVeg, onSave, onCancel, token }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    let finalImageUrl = imageUrl;
+    try {
+      let finalImageUrl = imageUrl;
 
-    if (imageFile) {
-      const formData = new FormData();
-      formData.append('image', imageFile);
+      if (imageFile) {
+        console.log('Uploading vegetable image...');
+        const formData = new FormData();
+        formData.append('image', imageFile);
 
-      const uploadRes = await fetch(`${API_URL}/upload`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-        body: formData
-      });
+        const uploadRes = await fetch(`${API_URL}/upload`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          body: formData
+        });
 
-      const uploadData = await uploadRes.json().catch(() => ({}));
-      if (uploadRes.ok && uploadData.url) {
-        finalImageUrl = uploadData.url;
+        const uploadData = await uploadRes.json().catch((err) => {
+          console.error('Image upload JSON parse error:', err);
+          return {};
+        });
+
+        console.log('Upload response:', { ok: uploadRes.ok, data: uploadData });
+
+        if (uploadRes.ok && uploadData.url) {
+          finalImageUrl = uploadData.url;
+        } else if (imageFile) {
+          console.warn('Image upload failed, continuing without image');
+        }
       }
+
+      const maintenance = monthlyTasks
+        .map((text, idx) =>
+          text.trim() ? { month: idx + 1, tasks: text.trim() } : null
+        )
+        .filter(Boolean);
+
+      await onSave({
+        name,
+        count: Number(count) || 0,
+        notes,
+        imageUrl: finalImageUrl,
+        maintenance,
+        category
+      });
+    } catch (err) {
+      console.error('VegetableForm submit error:', err);
+      alert('Bir hata oluştu: ' + err.message);
     }
-
-    const maintenance = monthlyTasks
-      .map((text, idx) =>
-        text.trim() ? { month: idx + 1, tasks: text.trim() } : null
-      )
-      .filter(Boolean);
-
-    await onSave({
-      name,
-      count: Number(count) || 0,
-      notes,
-      imageUrl: finalImageUrl,
-      maintenance,
-      category
-    });
   };
 
   return (
@@ -1273,14 +1357,33 @@ function VegetableForm({ initialVeg, onSave, onCancel, token }) {
 
       <label>
         Sebze Adı
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Örn: Domates"
+        <select
+          value={nameSelection}
+          onChange={(e) => setNameSelection(e.target.value)}
           required
-        />
+        >
+          <option value="">-- Seçiniz --</option>
+          {COMMON_VEGETABLE_NAMES.map((vegName) => (
+            <option key={vegName} value={vegName}>
+              {vegName}
+            </option>
+          ))}
+          <option value="Özel">🥬 Özel (Elle gir)</option>
+        </select>
       </label>
+
+      {nameSelection === 'Özel' && (
+        <label>
+          Özel Sebze Adı
+          <input
+            type="text"
+            value={customName}
+            onChange={(e) => setCustomName(e.target.value)}
+            placeholder="Sebze adını yazın"
+            required
+          />
+        </label>
+      )}
 
       <label>
         Adet
@@ -1330,11 +1433,11 @@ function VegetableForm({ initialVeg, onSave, onCancel, token }) {
 {imageUrl && (
   <div className="form-image-preview">
     <img
-      src={`https://oguzemrecakil.com.tr${imageUrl}`}
+      src={`${BASE_URL}${imageUrl}`}
       alt="Önizleme"
       loading="lazy"
        onError={(e) => {
-        e.target.src = 'https://oguzemrecakil.com.tr/uploads/noimage.png';
+        e.target.src = `${BASE_URL}/uploads/noimage.png`;
       }}
     />
     {/* 🆕 Sebze resmi sil butonu */}
@@ -1394,7 +1497,53 @@ function VegetableForm({ initialVeg, onSave, onCancel, token }) {
 
 /* -------------------- AĞAÇ FORMU (POPUP İÇİN) -------------------- */
 
+// Yaygın ağaç ve sebze isimleri listesi
+const COMMON_TREE_NAMES = [
+  'Elma',
+  'Armut',
+  'Kiraz',
+  'Vişne',
+  'Erik',
+  'Kayısı',
+  'Şeftali',
+  'Nektarin',
+  'Ayva',
+  'Nar',
+  'İncir',
+  'Dut',
+  'Ceviz',
+  'Badem',
+  'Fındık',
+  'Antep Fıstığı',
+  'Zeytin',
+  'Üzüm',
+  'Limon',
+  'Portakal',
+  'Mandalina',
+  'Greyfurt',
+  'Kivi',
+  'Kestane',
+  'Hurma',
+  'Avokado',
+  'Çam',
+  'Servi',
+  'Ardıç',
+  'Sedir',
+  'Ladin',
+  'Gül',
+  'Akasya',
+  'Ihlamur',
+  'Çınar',
+  'Meşe',
+  'Kavak',
+  'Söğüt',
+  'Mazı',
+  'Kızılağaç'
+];
+
 function TreeForm({ initialTree, onSave, onCancel, token }) {
+  const [nameSelection, setNameSelection] = useState(''); // Dropdown seçimi
+  const [customName, setCustomName] = useState(''); // Özel isim girişi
   const [name, setName] = useState('');
   const [count, setCount] = useState(1);
   const [notes, setNotes] = useState('');
@@ -1420,7 +1569,18 @@ function TreeForm({ initialTree, onSave, onCancel, token }) {
 
     useEffect(() => {
     if (initialTree) {
-      setName(initialTree.name || '');
+      const treeName = initialTree.name || '';
+      setName(treeName);
+
+      // Listede varsa dropdown'dan seç, yoksa "Özel" seç
+      if (COMMON_TREE_NAMES.includes(treeName)) {
+        setNameSelection(treeName);
+        setCustomName('');
+      } else {
+        setNameSelection('Özel');
+        setCustomName(treeName);
+      }
+
       setCount(
         typeof initialTree.count === 'number' ? initialTree.count : 1
       );
@@ -1440,6 +1600,8 @@ function TreeForm({ initialTree, onSave, onCancel, token }) {
       setMonthlyTasks(tasks);
     } else {
       setName('');
+      setNameSelection('');
+      setCustomName('');
       setCount(1);
       setNotes('');
       setImageUrl('');
@@ -1451,6 +1613,15 @@ function TreeForm({ initialTree, onSave, onCancel, token }) {
     }
   }, [initialTree]);
 
+  // nameSelection veya customName değiştiğinde name'i güncelle
+  useEffect(() => {
+    if (nameSelection === 'Özel') {
+      setName(customName);
+    } else if (nameSelection) {
+      setName(nameSelection);
+    }
+  }, [nameSelection, customName]);
+
   const handleTaskChange = (index, value) => {
     const copy = [...monthlyTasks];
     copy[index] = value;
@@ -1460,43 +1631,57 @@ function TreeForm({ initialTree, onSave, onCancel, token }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    let finalImageUrl = imageUrl;
+    try {
+      let finalImageUrl = imageUrl;
 
-    // Yeni dosya seçildiyse sunucuya yükle
-    if (imageFile) {
-      const formData = new FormData();
-      formData.append('image', imageFile);
+      // Yeni dosya seçildiyse sunucuya yükle
+      if (imageFile) {
+        console.log('Uploading image...');
+        const formData = new FormData();
+        formData.append('image', imageFile);
 
-      const uploadRes = await fetch(`${API_URL}/upload`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-        body: formData
-      });
+        const uploadRes = await fetch(`${API_URL}/upload`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          body: formData
+        });
 
-      const uploadData = await uploadRes.json().catch(() => ({}));
-      if (uploadRes.ok && uploadData.url) {
-        finalImageUrl = uploadData.url;
+        const uploadData = await uploadRes.json().catch((err) => {
+          console.error('Image upload JSON parse error:', err);
+          return {};
+        });
+
+        console.log('Upload response:', { ok: uploadRes.ok, data: uploadData });
+
+        if (uploadRes.ok && uploadData.url) {
+          finalImageUrl = uploadData.url;
+        } else if (imageFile) {
+          console.warn('Image upload failed, continuing without image');
+        }
       }
+
+      const maintenance = monthlyTasks
+        .map((text, idx) =>
+          text.trim()
+            ? { month: idx + 1, tasks: text.trim() }
+            : null
+        )
+        .filter(Boolean);
+
+      await onSave({
+        name,
+        count: Number(count) || 0,
+        notes,
+        imageUrl: finalImageUrl,
+        maintenance,
+        category
+      });
+    } catch (err) {
+      console.error('TreeForm submit error:', err);
+      alert('Bir hata oluştu: ' + err.message);
     }
-
-    const maintenance = monthlyTasks
-      .map((text, idx) =>
-        text.trim()
-          ? { month: idx + 1, tasks: text.trim() }
-          : null
-      )
-      .filter(Boolean);
-
-    await onSave({
-      name,
-      count: Number(count) || 0,
-      notes,
-      imageUrl: finalImageUrl,
-      maintenance,
-      category
-    });
   };
 
   return (
@@ -1505,14 +1690,33 @@ function TreeForm({ initialTree, onSave, onCancel, token }) {
 
       <label>
         Ağaç Adı
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Örn: Elma Ağacı"
+        <select
+          value={nameSelection}
+          onChange={(e) => setNameSelection(e.target.value)}
           required
-        />
+        >
+          <option value="">-- Seçiniz --</option>
+          {COMMON_TREE_NAMES.map((treeName) => (
+            <option key={treeName} value={treeName}>
+              {treeName}
+            </option>
+          ))}
+          <option value="Özel">🌱 Özel (Elle gir)</option>
+        </select>
       </label>
+
+      {nameSelection === 'Özel' && (
+        <label>
+          Özel Ağaç Adı
+          <input
+            type="text"
+            value={customName}
+            onChange={(e) => setCustomName(e.target.value)}
+            placeholder="Ağaç adını yazın"
+            required
+          />
+        </label>
+      )}
 
       <label>
         Adet
@@ -1563,11 +1767,11 @@ function TreeForm({ initialTree, onSave, onCancel, token }) {
       {imageUrl && (
   <div className="form-image-preview">
     <img
-      src={`https://oguzemrecakil.com.tr${imageUrl}`}
+      src={`${BASE_URL}${imageUrl}`}
       alt="Önizleme"
-      loading="lazy" 
+      loading="lazy"
       onError={(e) => {
-        e.target.src = 'https://oguzemrecakil.com.tr/uploads/noimage.jpg';
+        e.target.src = `${BASE_URL}/uploads/noimage.jpg`;
       }}
     />
   </div>
@@ -1663,7 +1867,7 @@ function VegetableManager({ token }) {
       const res = await fetch(`${API_URL}/vegetables`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ([]));
       if (!res.ok) {
         throw new Error(data.message || 'Sebzeler alınamadı.');
       }
@@ -1720,6 +1924,7 @@ function VegetableManager({ token }) {
         method = 'PUT';
       }
 
+      console.log('Saving vegetable:', vegData);
       const res = await fetch(url, {
         method,
         headers: {
@@ -1729,7 +1934,12 @@ function VegetableManager({ token }) {
         body: JSON.stringify(vegData)
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch((err) => {
+        console.error('JSON parse error:', err);
+        return {};
+      });
+
+      console.log('Response:', { ok: res.ok, status: res.status, data });
 
       if (!res.ok) {
         throw new Error(data.message || 'Kaydetme başarısız.');
@@ -1746,6 +1956,7 @@ function VegetableManager({ token }) {
       setShowForm(false);
       setEditingVeg(null);
     } catch (err) {
+      console.error('Save error:', err);
       alert(err.message);
     }
   };
@@ -1833,15 +2044,14 @@ function VegetableManager({ token }) {
             >
               <div className="tree-card-image-wrapper">
                 <img
-  src={`https://oguzemrecakil.com.tr${
+  src={`${BASE_URL}${
     veg.imageUrl || '/uploads/noimage.png'
   }`}
   alt={veg.name}
   className="tree-card-image"
   loading="lazy"
   onError={(e) => {
-    e.target.src =
-      'https://oguzemrecakil.com.tr/uploads/noimage.png';
+    e.target.src = `${BASE_URL}/uploads/noimage.png`;
   }}
 />
               </div>
@@ -1942,43 +2152,64 @@ function VegetableManager({ token }) {
             <h3>Aylık Bakım Planı</h3>
             {selectedVeg.maintenance &&
             selectedVeg.maintenance.length > 0 ? (
-              <ul className="maintenance-list">
-               {selectedVeg.maintenance.map((m) => {
-  const text = m.tasks || 'Görev girilmemiş';
-  const isImportant = /budama|ilaç|sulama|gübre/i.test(text);
-  const tag = classifyMaintenanceTask(text);
+              <div className="maintenance-table-wrapper">
+                <table className="maintenance-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '100px' }}>Ay</th>
+                      <th style={{ width: '100px' }}>Kategori</th>
+                      <th>Bakım Görevleri</th>
+                      <th style={{ width: '80px', textAlign: 'center' }}>Durum</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedVeg.maintenance
+                      .sort((a, b) => a.month - b.month)
+                      .map((m) => {
+                        const text = m.tasks || 'Görev girilmemiş';
+                        const isImportant = /budama|ilaç|sulama|gübre/i.test(text);
+                        const tag = classifyMaintenanceTask(text);
 
-  return (
-    <li
-      key={m._id || `${selectedVeg._id}-${m.month}`}
-      className={
-        'maintenance-item ' +
-        (isImportant ? 'important ' : '') +
-        (m.completed ? 'completed ' : '')
-      }
-      onClick={() =>
-        handleMaintenanceToggle(
-          selectedVeg._id,
-          m.month,
-          m.completed
-        )
-      }
-    >
-      {m.completed && (
-        <span className="maintenance-check">✅</span>
-      )}
-      <span className="maintenance-month-chip">
-        {monthNames[m.month - 1]}
-      </span>
-      <span className={`maintenance-tag ${tag.className}`}>
-        {tag.label}
-      </span>
-      <span className="maintenance-task">{text}</span>
-    </li>
-  );
-})}
-
-              </ul>
+                        return (
+                          <tr
+                            key={m._id || `${selectedVeg._id}-${m.month}`}
+                            className={
+                              'maintenance-table-row ' +
+                              (isImportant ? 'important ' : '') +
+                              (m.completed ? 'completed ' : '')
+                            }
+                            onClick={() =>
+                              handleMaintenanceToggle(
+                                selectedVeg._id,
+                                m.month,
+                                m.completed
+                              )
+                            }
+                          >
+                            <td>
+                              <span className="maintenance-month-chip">
+                                {monthNames[m.month - 1]}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`maintenance-tag ${tag.className}`}>
+                                {tag.label}
+                              </span>
+                            </td>
+                            <td className="maintenance-task-cell">{text}</td>
+                            <td style={{ textAlign: 'center' }}>
+                              {m.completed ? (
+                                <span className="maintenance-check">✅</span>
+                              ) : (
+                                <span className="maintenance-pending">⏳</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <p className="maintenance-empty">
                 Bakım planı girilmemiş.
@@ -1987,16 +2218,16 @@ function VegetableManager({ token }) {
 
             <div className="modal-actions">
               <button
-                className="btn"
-                onClick={() => handleEdit(selectedVeg)}
-              >
-                Düzenle
-              </button>
-              <button
                 className="btn danger"
                 onClick={() => handleDelete(selectedVeg._id)}
               >
                 Sil
+              </button>
+              <button
+                className="btn"
+                onClick={() => handleEdit(selectedVeg)}
+              >
+                Düzenle
               </button>
               <button className="btn" onClick={closeDetail}>
                 Kapat
@@ -2044,7 +2275,7 @@ function TreeManager({ token }) {
       const res = await fetch(`${API_URL}/trees`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ([]));
       if (!res.ok) {
         throw new Error(data.message || 'Ağaçlar alınamadı.');
       }
@@ -2142,6 +2373,7 @@ function TreeManager({ token }) {
         method = 'PUT';
       }
 
+      console.log('Saving tree:', treeData);
       const res = await fetch(url, {
         method,
         headers: {
@@ -2151,7 +2383,12 @@ function TreeManager({ token }) {
         body: JSON.stringify(treeData)
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch((err) => {
+        console.error('JSON parse error:', err);
+        return {};
+      });
+
+      console.log('Response:', { ok: res.ok, status: res.status, data });
 
       if (!res.ok) {
         throw new Error(data.message || 'Kaydetme başarısız.');
@@ -2168,6 +2405,7 @@ function TreeManager({ token }) {
       setShowForm(false);
       setEditingTree(null);
     } catch (err) {
+      console.error('Save error:', err);
       alert(err.message);
     }
   };
@@ -2210,15 +2448,14 @@ function TreeManager({ token }) {
             >
               <div className="tree-card-image-wrapper">
              <img
-  src={`https://oguzemrecakil.com.tr${
+  src={`${BASE_URL}${
     tree.imageUrl || '/uploads/noimage.jpg'
   }`}
   alt={tree.name}
   className="tree-card-image"
   loading="lazy"
   onError={(e) => {
-    e.target.src =
-      'https://oguzemrecakil.com.tr/uploads/noimage.jpg';
+    e.target.src = `${BASE_URL}/uploads/noimage.jpg`;
   }}
 />
               </div>
@@ -2318,59 +2555,80 @@ function TreeManager({ token }) {
             <h3>Aylık Bakım Planı</h3>
             {selectedTree.maintenance &&
             selectedTree.maintenance.length > 0 ? (
-              <ul className="maintenance-list">
-                {selectedTree.maintenance.map((m) => {
-  const text = m.tasks || 'Görev girilmemiş';
-  const isImportant = /budama|ilaç|sulama|gübre/i.test(text);
-  const tag = classifyMaintenanceTask(text);
+              <div className="maintenance-table-wrapper">
+                <table className="maintenance-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '100px' }}>Ay</th>
+                      <th style={{ width: '100px' }}>Kategori</th>
+                      <th>Bakım Görevleri</th>
+                      <th style={{ width: '80px', textAlign: 'center' }}>Durum</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedTree.maintenance
+                      .sort((a, b) => a.month - b.month)
+                      .map((m) => {
+                        const text = m.tasks || 'Görev girilmemiş';
+                        const isImportant = /budama|ilaç|sulama|gübre/i.test(text);
+                        const tag = classifyMaintenanceTask(text);
 
-  return (
-    <li
-      key={m._id || `${selectedTree._id}-${m.month}`}
-      className={
-        'maintenance-item ' +
-        (isImportant ? 'important ' : '') +
-        (m.completed ? 'completed ' : '')
-      }
-      onClick={() =>
-        handleMaintenanceToggle(
-          selectedTree._id,
-          m.month,
-          m.completed
-        )
-      }
-    >
-      {m.completed && (
-        <span className="maintenance-check">✅</span>
-      )}
-      <span className="maintenance-month-chip">
-        {monthNames[m.month - 1]}
-      </span>
-      <span className={`maintenance-tag ${tag.className}`}>
-        {tag.label}
-      </span>
-      <span className="maintenance-task">{text}</span>
-    </li>
-  );
-})}
-
-              </ul>
+                        return (
+                          <tr
+                            key={m._id || `${selectedTree._id}-${m.month}`}
+                            className={
+                              'maintenance-table-row ' +
+                              (isImportant ? 'important ' : '') +
+                              (m.completed ? 'completed ' : '')
+                            }
+                            onClick={() =>
+                              handleMaintenanceToggle(
+                                selectedTree._id,
+                                m.month,
+                                m.completed
+                              )
+                            }
+                          >
+                            <td>
+                              <span className="maintenance-month-chip">
+                                {monthNames[m.month - 1]}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`maintenance-tag ${tag.className}`}>
+                                {tag.label}
+                              </span>
+                            </td>
+                            <td className="maintenance-task-cell">{text}</td>
+                            <td style={{ textAlign: 'center' }}>
+                              {m.completed ? (
+                                <span className="maintenance-check">✅</span>
+                              ) : (
+                                <span className="maintenance-pending">⏳</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <p className="maintenance-empty">Bakım planı girilmemiş.</p>
             )}
 
             <div className="modal-actions">
               <button
-                className="btn"
-                onClick={() => handleEdit(selectedTree)}
-              >
-                Düzenle
-              </button>
-              <button
                 className="btn danger"
                 onClick={() => handleDelete(selectedTree._id)}
               >
                 Sil
+              </button>
+              <button
+                className="btn"
+                onClick={() => handleEdit(selectedTree)}
+              >
+                Düzenle
               </button>
               <button className="btn" onClick={closeDetail}>
                 Kapat
@@ -3631,37 +3889,124 @@ const treePercent =
 
 
 function Settings({ token }) {
-  const [settings, setSettings] = useState(() => loadSettings());
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [message, setMessage] = useState('');
 
-  const updateSettings = (updater) => {
+  // Ayarları API'den yükle
+  useEffect(() => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API_URL}/settings`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setSettings(data);
+        } else {
+          console.error('Ayarlar yüklenemedi');
+          // Hata durumunda varsayılan ayarları kullan
+          setSettings(loadSettings());
+        }
+      } catch (err) {
+        console.error('Ayarlar yüklenirken hata:', err);
+        // Hata durumunda localStorage'dan yükle
+        setSettings(loadSettings());
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, [token]);
+
+  // Ayarları API'ye kaydet
+  const updateSettings = async (updater) => {
+    const next = typeof updater === 'function' ? updater(settings) : updater;
+
+    // Optimistic update
+    setSettings(next);
+    setSaving(true);
+
+    try {
+      await fetch(`${API_URL}/settings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(next)
+      });
+
+      setTimeout(() => setSaving(false), 400);
+    } catch (err) {
+      console.error('Ayarlar kaydedilemedi:', err);
+      setSaving(false);
+      setMessage('Ayarlar kaydedilemedi. Lütfen tekrar deneyin.');
+    }
+  };
+
+  // Tek bir ayarı güncelle (PATCH)
+  const updateSingleSetting = async (path, value) => {
+    // Optimistic update
     setSettings((prev) => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      saveSettings(next);
+      const next = { ...prev };
+      const keys = path.split('.');
+      let obj = next;
+      for (let i = 0; i < keys.length - 1; i++) {
+        obj = obj[keys[i]];
+      }
+      obj[keys[keys.length - 1]] = value;
       return next;
     });
+
     setSaving(true);
-    setTimeout(() => setSaving(false), 400);
+
+    try {
+      await fetch(`${API_URL}/settings`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ path, value })
+      });
+
+      setTimeout(() => setSaving(false), 400);
+    } catch (err) {
+      console.error('Ayar kaydedilemedi:', err);
+      setSaving(false);
+    }
   };
 
   const handleToggle = (path) => {
-    updateSettings((prev) => {
-      const next = { ...prev };
-      const [section, key] = path.split('.');
-      next[section] = { ...next[section], [key]: !next[section][key] };
-      return next;
-    });
+    if (!settings) return;
+
+    const keys = path.split('.');
+    let current = settings;
+    for (const key of keys) {
+      current = current[key];
+    }
+
+    updateSingleSetting(path, !current);
   };
 
   const handleSelectChange = (path, value) => {
-    updateSettings((prev) => {
-      const next = { ...prev };
-      const [section, key] = path.split('.');
-      next[section] = { ...next[section], [key]: value };
-      return next;
-    });
+    if (!settings) return;
+    updateSingleSetting(path, value);
+  };
+
+  const handleNumberChange = (path, value) => {
+    if (!settings) return;
+    updateSingleSetting(path, Number(value));
   };
 
   const handleExportJson = async () => {
@@ -3725,33 +4070,39 @@ function Settings({ token }) {
       setExporting(false);
     }
   };
- const [city, setCity] = useState(() => {
-    try {
-      return localStorage.getItem('sg_city') || 'Elazig';
-    } catch {
-      return 'Elazig';
-    }
-  });
-
-  const handleCityChange = (e) => {
-    const value = e.target.value;
-    setCity(value);
-    try {
-      localStorage.setItem('sg_city', value);
-      // Hava durumu widget'ına haber ver
-      window.dispatchEvent(new Event('sg-city-changed'));
-    } catch (err) {
-      console.warn('Şehir ayarı kaydedilemedi:', err);
-    }
+  const handleCityChange = (value) => {
+    updateSingleSetting('weather.city', value);
+    // Hava durumu widget'ına haber ver
+    window.dispatchEvent(new Event('sg-city-changed'));
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="settings-page">
+        <h2>Ayarlar</h2>
+        <p>Ayarlar yükleniyor...</p>
+      </div>
+    );
+  }
+
+  // Settings henüz yüklenmediyse
+  if (!settings) {
+    return (
+      <div className="settings-page">
+        <h2>Ayarlar</h2>
+        <p>Ayarlar yüklenemedi. Lütfen giriş yapın.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="settings-page">
       <div className="settings-header-row">
         <div>
           <h2>Ayarlar</h2>
           <p className="muted">
-            Uygulamanın bazı varsayılan davranışlarını burada
-            özelleştirebilirsin.
+            Uygulamanın tüm ayarlarını burada özelleştirebilirsin. Ayarlar veritabanında saklanır ve tüm cihazlarında senkronize olur.
           </p>
         </div>
         {saving && <span className="settings-status">Kaydedildi ✓</span>}
@@ -3760,29 +4111,108 @@ function Settings({ token }) {
       <div className="settings-grid">
         {/* Bildirim & Hatırlatma */}
         <section className="settings-section">
-          <h3>Bildirim &amp; Hatırlatma</h3>
+          <h3>📬 Bildirim &amp; Hatırlatma</h3>
           <p className="settings-section-desc">
-            Aylık bakım hatırlatmalarının varsayılan davranışlarını ayarla.
+            Bildirim ve hatırlatma tercihlerini ayarla.
           </p>
 
           <div className="settings-item">
             <div>
+              <div className="settings-item-title">Email bildirimleri</div>
+              <div className="settings-item-desc">
+                Bakım zamanı geldiğinde email ile bildirim al
+              </div>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings.notifications.emailEnabled}
+                onChange={() => handleToggle('notifications.emailEnabled')}
+              />
+              <span className="slider" />
+            </label>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Push bildirimleri</div>
+              <div className="settings-item-desc">
+                Tarayıcı bildirimleri ile anında haberdar ol
+              </div>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings.notifications.pushEnabled}
+                onChange={() => handleToggle('notifications.pushEnabled')}
+              />
+              <span className="slider" />
+            </label>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Haftalık özet maili</div>
+              <div className="settings-item-desc">
+                Her hafta özet rapor email ile gönderilsin
+              </div>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings.notifications.weeklyDigest}
+                onChange={() => handleToggle('notifications.weeklyDigest')}
+              />
+              <span className="slider" />
+            </label>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Kritik görev uyarıları</div>
+              <div className="settings-item-desc">
+                Budama, hasat gibi önemli görevler için özel bildirim
+              </div>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings.notifications.criticalTaskAlerts}
+                onChange={() => handleToggle('notifications.criticalTaskAlerts')}
+              />
+              <span className="slider" />
+            </label>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Hatırlatma saati</div>
+              <div className="settings-item-desc">
+                Günlük hatırlatmaların hangi saatte gönderileceği
+              </div>
+            </div>
+            <input
+              type="time"
+              className="settings-select"
+              value={settings.notifications.reminderTime}
+              onChange={(e) => handleSelectChange('notifications.reminderTime', e.target.value)}
+            />
+          </div>
+
+          <div className="settings-item">
+            <div>
               <div className="settings-item-title">
-                Önemli ağaç görevleri öncelikli olsun
+                Önemli ağaç görevleri öncelikli
               </div>
               <div className="settings-item-desc">
-                Hatırlatma ekranına girdiğinde varsayılan olarak sadece
-                budama, ilaçlama, gübreleme gibi <strong>önemli</strong>{' '}
-                ağaç görevleri seçili gelsin.
+                Hatırlatma ekranında varsayılan olarak sadece önemli görevleri göster
               </div>
             </div>
             <label className="switch">
               <input
                 type="checkbox"
                 checked={settings.reminders.treeOnlyImportantDefault}
-                onChange={() =>
-                  handleToggle('reminders.treeOnlyImportantDefault')
-                }
+                onChange={() => handleToggle('reminders.treeOnlyImportantDefault')}
               />
               <span className="slider" />
             </label>
@@ -3791,20 +4221,17 @@ function Settings({ token }) {
           <div className="settings-item">
             <div>
               <div className="settings-item-title">
-                Önemli sebze görevleri öncelikli olsun
+                Önemli sebze görevleri öncelikli
               </div>
               <div className="settings-item-desc">
-                Sebze hatırlatmalarında da varsayılan filtreyi sadece
-                önemli görevlere ayarla.
+                Sebze hatırlatmalarında da varsayılan filtreyi sadece önemli görevlere ayarla
               </div>
             </div>
             <label className="switch">
               <input
                 type="checkbox"
                 checked={settings.reminders.vegOnlyImportantDefault}
-                onChange={() =>
-                  handleToggle('reminders.vegOnlyImportantDefault')
-                }
+                onChange={() => handleToggle('reminders.vegOnlyImportantDefault')}
               />
               <span className="slider" />
             </label>
@@ -3816,8 +4243,7 @@ function Settings({ token }) {
                 Bakım önerileri otomatik açılsın
               </div>
               <div className="settings-item-desc">
-                Hatırlatmalar sayfasına girdiğinde otomatik olarak
-                &quot;Otomatik Bakım Önerileri&quot; paneli açık olsun.
+                Hatırlatmalar sayfasına girdiğinde otomatik olarak öneriler paneli açık olsun
               </div>
             </div>
             <label className="switch">
@@ -3831,9 +4257,380 @@ function Settings({ token }) {
           </div>
         </section>
 
+        {/* Görünüm & Tema */}
+        <section className="settings-section">
+          <h3>🎨 Görünüm &amp; Tema</h3>
+          <p className="settings-section-desc">
+            Uygulamanın görünümünü özelleştir.
+          </p>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Tema modu</div>
+              <div className="settings-item-desc">
+                Aydınlık, karanlık veya otomatik tema seç
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.appearance.theme}
+              onChange={(e) => handleSelectChange('appearance.theme', e.target.value)}
+            >
+              <option value="light">Aydınlık</option>
+              <option value="dark">Karanlık</option>
+              <option value="auto">Otomatik (sistem ayarı)</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Renk teması</div>
+              <div className="settings-item-desc">
+                Ana renk paletini seç
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.appearance.colorScheme}
+              onChange={(e) => handleSelectChange('appearance.colorScheme', e.target.value)}
+            >
+              <option value="green">Yeşil (Varsayılan)</option>
+              <option value="blue">Mavi</option>
+              <option value="brown">Kahverengi</option>
+              <option value="purple">Mor</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Yazı boyutu</div>
+              <div className="settings-item-desc">
+                Uygulama genelinde yazı boyutunu ayarla
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.appearance.fontSize}
+              onChange={(e) => handleSelectChange('appearance.fontSize', e.target.value)}
+            >
+              <option value="small">Küçük</option>
+              <option value="medium">Normal</option>
+              <option value="large">Büyük</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Görünüm modu</div>
+              <div className="settings-item-desc">
+                Ağaç ve sebzeleri kart veya liste olarak göster
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.appearance.viewMode}
+              onChange={(e) => handleSelectChange('appearance.viewMode', e.target.value)}
+            >
+              <option value="card">Kart Görünümü</option>
+              <option value="list">Liste Görünümü</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Grafikler varsayılan açık</div>
+              <div className="settings-item-desc">
+                Rapor sayfasında grafikler başlangıçta açık olsun
+              </div>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings.appearance.chartsDefaultOpen}
+                onChange={() => handleToggle('appearance.chartsDefaultOpen')}
+              />
+              <span className="slider" />
+            </label>
+          </div>
+        </section>
+
+        {/* Hava Durumu */}
+        <section className="settings-section">
+          <h3>🌤️ Hava Durumu</h3>
+          <p className="settings-section-desc">
+            Hava durumu ayarlarını özelleştir.
+          </p>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Varsayılan şehir</div>
+              <div className="settings-item-desc">
+                Header ve hava durumu sayfasında hangi şehrin bilgileri gösterilsin
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.weather.city}
+              onChange={(e) => handleCityChange(e.target.value)}
+            >
+              <option value="Elazig">Elazığ</option>
+              <option value="Istanbul">İstanbul</option>
+              <option value="Ankara">Ankara</option>
+              <option value="Izmir">İzmir</option>
+              <option value="Bursa">Bursa</option>
+              <option value="Antalya">Antalya</option>
+              <option value="Adana">Adana</option>
+              <option value="Gaziantep">Gaziantep</option>
+              <option value="Konya">Konya</option>
+              <option value="Mersin">Mersin</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Sıcaklık birimi</div>
+              <div className="settings-item-desc">
+                Celsius veya Fahrenheit
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.weather.unit}
+              onChange={(e) => handleSelectChange('weather.unit', e.target.value)}
+            >
+              <option value="metric">Celsius (°C)</option>
+              <option value="imperial">Fahrenheit (°F)</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Güncelleme sıklığı</div>
+              <div className="settings-item-desc">
+                Hava durumu bilgisi ne sıklıkla güncellensin (dakika)
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.weather.updateFrequency}
+              onChange={(e) => handleNumberChange('weather.updateFrequency', e.target.value)}
+            >
+              <option value="15">15 dakika</option>
+              <option value="30">30 dakika</option>
+              <option value="60">1 saat</option>
+              <option value="120">2 saat</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Yağış uyarıları</div>
+              <div className="settings-item-desc">
+                Yağmur yağacağında bildirim gönder
+              </div>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings.weather.rainAlerts}
+                onChange={() => handleToggle('weather.rainAlerts')}
+              />
+              <span className="slider" />
+            </label>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Aşırı sıcaklık uyarıları</div>
+              <div className="settings-item-desc">
+                Belirlenen sıcaklığın üzerine çıkınca bildirim gönder
+              </div>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings.weather.heatAlerts}
+                onChange={() => handleToggle('weather.heatAlerts')}
+              />
+              <span className="slider" />
+            </label>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Sıcaklık eşiği (°C)</div>
+              <div className="settings-item-desc">
+                Bu sıcaklığın üzerinde uyarı ver
+              </div>
+            </div>
+            <input
+              type="number"
+              className="settings-select"
+              value={settings.weather.heatThreshold}
+              onChange={(e) => handleNumberChange('weather.heatThreshold', e.target.value)}
+              min="25"
+              max="45"
+            />
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Don uyarıları</div>
+              <div className="settings-item-desc">
+                Sıcaklık 0°C altına düşeceğinde bildirim gönder
+              </div>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings.weather.frostAlerts}
+                onChange={() => handleToggle('weather.frostAlerts')}
+              />
+              <span className="slider" />
+            </label>
+          </div>
+        </section>
+
+        {/* Bakım Planlama */}
+        <section className="settings-section">
+          <h3>🌱 Bakım Planlama</h3>
+          <p className="settings-section-desc">
+            Otomatik bakım planlama ayarlarını düzenle.
+          </p>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Varsayılan sulama sıklığı</div>
+              <div className="settings-item-desc">
+                Yeni eklenen bitkiler için otomatik sulama aralığı (gün)
+              </div>
+            </div>
+            <input
+              type="number"
+              className="settings-select"
+              value={settings.maintenance.defaultWateringFrequency}
+              onChange={(e) => handleNumberChange('maintenance.defaultWateringFrequency', e.target.value)}
+              min="1"
+              max="30"
+            />
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Varsayılan gübreleme periyodu</div>
+              <div className="settings-item-desc">
+                Yeni eklenen bitkiler için otomatik gübreleme aralığı (gün)
+              </div>
+            </div>
+            <input
+              type="number"
+              className="settings-select"
+              value={settings.maintenance.defaultFertilizingPeriod}
+              onChange={(e) => handleNumberChange('maintenance.defaultFertilizingPeriod', e.target.value)}
+              min="7"
+              max="365"
+            />
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Otomatik görev oluşturma</div>
+              <div className="settings-item-desc">
+                Yeni bitki eklendiğinde otomatik bakım planı oluştur
+              </div>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings.maintenance.autoTaskCreation}
+                onChange={() => handleToggle('maintenance.autoTaskCreation')}
+              />
+              <span className="slider" />
+            </label>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Hasat hatırlatmaları</div>
+              <div className="settings-item-desc">
+                Meyve ve sebzelerin hasat zamanı geldiğinde bildirim gönder
+              </div>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings.maintenance.harvestReminders}
+                onChange={() => handleToggle('maintenance.harvestReminders')}
+              />
+              <span className="slider" />
+            </label>
+          </div>
+        </section>
+
+        {/* Profil & Kişiselleştirme */}
+        <section className="settings-section">
+          <h3>👤 Profil &amp; Kişiselleştirme</h3>
+          <p className="settings-section-desc">
+            Bahçe bilgilerini ve deneyim seviyeni belirle.
+          </p>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Bahçe adı</div>
+              <div className="settings-item-desc">
+                Bahçene özel bir isim ver
+              </div>
+            </div>
+            <input
+              type="text"
+              className="settings-select"
+              placeholder="örn: Köy Bahçesi, Balkon Bahçesi"
+              value={settings.profile.gardenName}
+              onChange={(e) => handleSelectChange('profile.gardenName', e.target.value)}
+              maxLength="50"
+            />
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Bahçe büyüklüğü (m²)</div>
+              <div className="settings-item-desc">
+                Bahçenin toplam alanı
+              </div>
+            </div>
+            <input
+              type="number"
+              className="settings-select"
+              placeholder="örn: 500"
+              value={settings.profile.gardenSize}
+              onChange={(e) => handleNumberChange('profile.gardenSize', e.target.value)}
+              min="0"
+              max="100000"
+            />
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Deneyim seviyesi</div>
+              <div className="settings-item-desc">
+                Bahçecilik deneyimini belirle (önerileri buna göre ayarlarız)
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.profile.experienceLevel}
+              onChange={(e) => handleSelectChange('profile.experienceLevel', e.target.value)}
+            >
+              <option value="beginner">Yeni Başlayan</option>
+              <option value="intermediate">Orta Seviye</option>
+              <option value="advanced">İleri Seviye</option>
+            </select>
+          </div>
+        </section>
+
         {/* Tarih & Saat */}
         <section className="settings-section">
-          <h3>Tarih &amp; Saat</h3>
+          <h3>📅 Tarih &amp; Saat</h3>
           <p className="settings-section-desc">
             Uygulama içinde görünen tarih ve saat biçimini belirle.
           </p>
@@ -3842,16 +4639,13 @@ function Settings({ token }) {
             <div>
               <div className="settings-item-title">Tarih formatı</div>
               <div className="settings-item-desc">
-                Şimdilik sadece bilgi amaçlı; tarih gösterimleri
-                ileride bu seçime göre ayarlanacak.
+                Tarih gösterimlerinde kullanılacak format
               </div>
             </div>
             <select
               className="settings-select"
               value={settings.ui.dateFormat}
-              onChange={(e) =>
-                handleSelectChange('ui.dateFormat', e.target.value)
-              }
+              onChange={(e) => handleSelectChange('ui.dateFormat', e.target.value)}
             >
               <option value="dd.MM.yyyy">27.11.2025</option>
               <option value="yyyy-MM-dd">2025-11-27</option>
@@ -3863,44 +4657,18 @@ function Settings({ token }) {
             <div>
               <div className="settings-item-title">Saat formatı</div>
               <div className="settings-item-desc">
-                Saat satırlarının nasıl gösterileceğini belirle.
+                Saat gösterimlerinde kullanılacak format
               </div>
             </div>
             <select
               className="settings-select"
               value={settings.ui.timeFormat}
-              onChange={(e) =>
-                handleSelectChange('ui.timeFormat', e.target.value)
-              }
+              onChange={(e) => handleSelectChange('ui.timeFormat', e.target.value)}
             >
               <option value="HH:mm">24 saat (14:30)</option>
               <option value="hh:mm">12 saat (02:30)</option>
             </select>
           </div>
-
-<div className="settings-item">
-            <div>
-              <div className="settings-item-title">Varsayılan il</div>
-              <div className="settings-item-desc">
-                 Header&apos;daki hava durumu ve şehir bilgisini bu il üzerinden
-            göster.
-              </div>
-            </div>
-             <select
-          className="settings-select"
-          value={city}
-          onChange={handleCityChange}
-        >
-          <option value="Elazig">Elazığ</option>
-          <option value="Istanbul">İstanbul</option>
-          <option value="Ankara">Ankara</option>
-          <option value="Izmir">İzmir</option>
-          <option value="Bursa">Bursa</option>
-          <option value="Antalya">Antalya</option>
-        </select>
-          </div>
-
-
         </section>
 
         {/* Veri yönetimi */}
@@ -4339,7 +5107,11 @@ function Reports({ token }) {
 function App() {
   const [token, setToken] = useState(null);
   const [username, setUsername] = useState('');
-  const [tab, setTab] = useState('home'); // varsayılan HOME
+  const [tab, setTab] = useState(() => {
+    // Sayfa yüklenirken localStorage'dan tab değerini oku
+    const savedTab = localStorage.getItem('sg_current_tab');
+    return savedTab || 'home';
+  });
   const [mobileTabsOpen, setMobileTabsOpen] = useState(false); // 👈 yeni
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushError, setPushError] = useState('');
@@ -4360,6 +5132,11 @@ function App() {
     }
   }, []);
 
+  // Tab değiştiğinde localStorage'a kaydet
+  useEffect(() => {
+    localStorage.setItem('sg_current_tab', tab);
+  }, [tab]);
+
   const handleLogin = (jwtToken, user) => {
     setToken(jwtToken);
     setUsername(user);
@@ -4374,38 +5151,104 @@ function App() {
     localStorage.removeItem('sg_username');
   };
 
+  // Tarayıcı tespiti
+  const detectBrowser = () => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    if (userAgent.includes('edg/')) return 'edge';
+    if (userAgent.includes('opr/') || userAgent.includes('opera')) return 'opera';
+    if (userAgent.includes('chrome')) return 'chrome';
+    if (userAgent.includes('safari') && !userAgent.includes('chrome')) return 'safari';
+    if (userAgent.includes('firefox')) return 'firefox';
+    return 'unknown';
+  };
+
   const subscribeToPush = async () => {
     setPushError('');
 
-    if (
-      !('serviceWorker' in navigator) ||
-      typeof Notification === 'undefined'
-    ) {
-      setPushError('Tarayıcın push bildirimlerini desteklemiyor.');
+    const browser = detectBrowser();
+    console.log('Tespit edilen tarayıcı:', browser);
+
+    // Tarayıcı desteği kontrolü
+    if (!('serviceWorker' in navigator)) {
+      setPushError('Tarayıcın Service Worker desteklemiyor.');
       return;
     }
 
+    if (typeof Notification === 'undefined') {
+      setPushError('Tarayıcın bildirim özelliğini desteklemiyor.');
+      return;
+    }
+
+    // Safari özel kontrol
+    if (browser === 'safari') {
+      if (!('pushManager' in ServiceWorkerRegistration.prototype)) {
+        setPushError('Safari tarayıcınızda Push API desteklenmiyor. macOS 12.1+ veya iOS 16.4+ gereklidir.');
+        return;
+      }
+    }
+
     try {
-      const permission = await Notification.requestPermission();
+      // Bildirim izni isteme (tarayıcıya özel)
+      let permission;
+
+      if (browser === 'safari') {
+        // Safari için özel izin kontrolü
+        if (window.safari && window.safari.pushNotification) {
+          // Eski Safari push notification API
+          setPushError('Safari için Web Push henüz tam desteklenmiyor. Lütfen Chrome, Firefox veya Edge kullanın.');
+          return;
+        }
+        permission = await Notification.requestPermission();
+      } else {
+        // Chrome, Firefox, Edge, Opera için standart
+        permission = await Notification.requestPermission();
+      }
+
       if (permission !== 'granted') {
-        setPushError('Bildirim izni verilmedi.');
+        setPushError('Bildirim izni verilmedi. Tarayıcı ayarlarından izin verebilirsiniz.');
         return;
       }
 
+      // Service Worker kaydını bekle
       const registration = await navigator.serviceWorker.ready;
 
-      const subscription = await registration.pushManager.subscribe({
+      // Mevcut aboneliği kontrol et
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (subscription) {
+        console.log('Mevcut abonelik bulundu, güncelleniyor...');
+      }
+
+      // Push Manager aboneliği oluştur (tarayıcıya özel ayarlar)
+      const subscribeOptions = {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      });
+      };
 
+      // Firefox için ek ayarlar
+      if (browser === 'firefox') {
+        console.log('Firefox için push ayarları yapılandırılıyor...');
+      }
+
+      // Chrome/Edge/Opera için ek ayarlar
+      if (browser === 'chrome' || browser === 'edge' || browser === 'opera') {
+        console.log(`${browser.toUpperCase()} için push ayarları yapılandırılıyor...`);
+      }
+
+      subscription = await registration.pushManager.subscribe(subscribeOptions);
+
+      // Sunucuya gönder
       const res = await fetch(`${API_URL}/push/subscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(subscription)
+        body: JSON.stringify({
+          ...subscription.toJSON(),
+          browser: browser,
+          userAgent: navigator.userAgent
+        })
       });
 
       const data = await res.json().catch(() => ({}));
@@ -4416,9 +5259,45 @@ function App() {
       }
 
       setPushEnabled(true);
+      console.log(`${browser.toUpperCase()} için push bildirimleri başarıyla etkinleştirildi!`);
+
+      // Toplam abonelik sayısı
+      const totalSubs = data.totalSubscriptions || 1;
+      console.log(`Toplam aktif abonelik: ${totalSubs}`);
+
+      // Test bildirimi gönder (tarayıcıya özel)
+      let successMessage = '';
+      if (browser === 'firefox') {
+        successMessage = `Firefox için bildirimler etkinleştirildi!`;
+      } else if (browser === 'safari') {
+        successMessage = `Safari için bildirimler etkinleştirildi!`;
+      } else {
+        successMessage = `${browser.toUpperCase()} için bildirimler etkinleştirildi!`;
+      }
+
+      if (totalSubs > 1) {
+        successMessage += `\n\nToplam ${totalSubs} cihaz/tarayıcıda bildirimler aktif.`;
+      }
+
+      alert(successMessage);
+
     } catch (err) {
-      console.error(err);
-      setPushError(err.message || 'Push aboneliği yapılamadı.');
+      console.error('Push abonelik hatası:', err);
+
+      // Tarayıcıya özel hata mesajları
+      let errorMessage = 'Push aboneliği yapılamadı.';
+
+      if (browser === 'firefox' && err.message.includes('subscription')) {
+        errorMessage = 'Firefox için push aboneliği oluşturulamadı. Tarayıcı ayarlarınızı kontrol edin.';
+      } else if (browser === 'safari') {
+        errorMessage = 'Safari için push desteği sınırlıdır. Chrome veya Firefox kullanmanızı öneririz.';
+      } else if (err.message.includes('permissions')) {
+        errorMessage = 'Bildirim izinleri reddedildi. Tarayıcı ayarlarından izin vermelisiniz.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setPushError(errorMessage);
     }
   };
 

@@ -10,7 +10,17 @@
       "Bash(git add:*)",
       "Bash(git rm:*)",
       "Bash(powershell -Command \"Remove-Item -Recurse -Force ''C:\\Users\\YusufYalnizligi\\Desktop\\garden\\yedekk\\client\\.git'' -ErrorAction SilentlyContinue\")",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: Akıllı Bahçe Yönetim Sistemi\n\nFull-stack web uygulaması özellikleri:\n- React 19.2.0 frontend\n- Node.js + Express backend\n- MongoDB veritabanı\n- JWT authentication\n- Ağaç ve sebze envanteri yönetimi\n- Otomatik bakım planlama\n- Hava durumu entegrasyonu (OpenWeatherMap)\n- E-posta ve push bildirimleri\n- Chart.js ile raporlama\n- PWA desteği (offline çalışma)\n- Dark mode ve responsive tasarım\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(taskkill:*)",
+      "Bash(git checkout:*)",
+      "Bash(netstat:*)",
+      "Bash(npm install:*)",
+      "Bash(findstr:*)",
+      "Bash(cmd //c taskkill //PID 27196 //F)",
+      "Bash(cmd //c taskkill //PID 18424 //F)"
     ],
     "deny": [],
     "ask": []
