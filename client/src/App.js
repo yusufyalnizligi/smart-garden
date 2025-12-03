@@ -244,15 +244,48 @@ const classifyMaintenanceTask = (text = '') => {
 const SETTINGS_KEY = 'sg_settings';
 
 const DEFAULT_SETTINGS = {
+  notifications: {
+    emailEnabled: true,
+    pushEnabled: true,
+    weeklyDigest: false,
+    criticalTaskAlerts: true,
+    reminderTime: '08:00'
+  },
   weather: {
-    // İleride API tarafında şehir/birim desteği gelirse buradan yönetebiliriz
     city: 'Elazig',
-    unit: 'metric'
+    unit: 'metric',
+    updateFrequency: 30,
+    rainAlerts: true,
+    heatAlerts: true,
+    heatThreshold: 30,
+    frostAlerts: true
   },
   reminders: {
     treeOnlyImportantDefault: false,
     vegOnlyImportantDefault: false,
     autoOpenSuggestions: true
+  },
+  appearance: {
+    theme: 'light',
+    colorScheme: 'green',
+    fontSize: 'medium',
+    viewMode: 'card',
+    chartsDefaultOpen: true
+  },
+  maintenance: {
+    defaultWateringFrequency: 7,
+    defaultFertilizingPeriod: 30,
+    autoTaskCreation: true,
+    harvestReminders: true,
+    wateringSeasonStart: 3,  // Mart
+    wateringSeasonEnd: 10,   // Ekim
+    fertilizingSeasonStart: 3, // Mart
+    fertilizingSeasonEnd: 9   // Eylül
+  },
+  profile: {
+    gardenName: '',
+    gardenSize: 0,
+    experienceLevel: 'beginner'
   },
   ui: {
     dateFormat: 'dd.MM.yyyy',
@@ -268,8 +301,12 @@ function loadSettings() {
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
+      notifications: { ...DEFAULT_SETTINGS.notifications, ...(parsed.notifications || {}) },
       weather: { ...DEFAULT_SETTINGS.weather, ...(parsed.weather || {}) },
       reminders: { ...DEFAULT_SETTINGS.reminders, ...(parsed.reminders || {}) },
+      appearance: { ...DEFAULT_SETTINGS.appearance, ...(parsed.appearance || {}) },
+      maintenance: { ...DEFAULT_SETTINGS.maintenance, ...(parsed.maintenance || {}) },
+      profile: { ...DEFAULT_SETTINGS.profile, ...(parsed.profile || {}) },
       ui: { ...DEFAULT_SETTINGS.ui, ...(parsed.ui || {}) }
     };
   } catch (e) {
@@ -495,12 +532,30 @@ if (!res.ok) {
     return () => clearInterval(id);
   }, []);
 
-  const handleCitySelectChange = (e) => {
+  const handleCitySelectChange = async (e) => {
     const value = e.target.value;
     setCity(value);
     try {
       localStorage.setItem('sg_city', value);
-      // Header’daki widget’ı da güncelle
+      // Ayarlara da kaydet (API + localStorage'daki settings)
+      const currentSettings = loadSettings();
+      const updatedSettings = {
+        ...currentSettings,
+        weather: { ...currentSettings.weather, city: value }
+      };
+      saveSettings(updatedSettings);
+
+      // API'ye de kaydet
+      fetch(`${API_URL}/settings`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ path: 'weather.city', value })
+      }).catch((err) => console.warn('API settings update failed:', err));
+
+      // Header'daki widget'ı da güncelle
       window.dispatchEvent(new Event('sg-city-changed'));
     } catch (err) {
       console.warn('Şehir ayarı kaydedilemedi:', err);
@@ -1860,6 +1915,21 @@ function VegetableManager({ token }) {
   const [editingVeg, setEditingVeg] = useState(null);
   const [selectedVeg, setSelectedVeg] = useState(null);
 
+  // Görünüm modunu al
+  const [viewMode, setViewMode] = useState('card');
+  useEffect(() => {
+    const settings = loadSettings();
+    setViewMode(settings.appearance?.viewMode || 'card');
+
+    const handleSettingsChange = () => {
+      const newSettings = loadSettings();
+      setViewMode(newSettings.appearance?.viewMode || 'card');
+    };
+
+    window.addEventListener('sg-settings-changed', handleSettingsChange);
+    return () => window.removeEventListener('sg-settings-changed', handleSettingsChange);
+  }, []);
+
   const fetchVeggies = async () => {
     setLoading(true);
     setError('');
@@ -2027,7 +2097,7 @@ function VegetableManager({ token }) {
       {loading && <p>Yükleniyor...</p>}
       {error && <p className="error-text">{error}</p>}
 
-      <div className="cards-grid">
+      <div className={viewMode === 'list' ? 'items-list' : 'cards-grid'}>
         {veggies.map((veg) => {
           const totalTasks = veg.maintenance?.length || 0;
           const doneTasks =
@@ -2039,7 +2109,7 @@ function VegetableManager({ token }) {
           return (
             <div
               key={veg._id}
-              className="tree-card"
+              className={viewMode === 'list' ? 'item-row' : 'tree-card'}
               onClick={() => setSelectedVeg(veg)}
             >
               <div className="tree-card-image-wrapper">
@@ -2056,27 +2126,35 @@ function VegetableManager({ token }) {
 />
               </div>
 
-              <div className="tree-card-body">
+              <div className={viewMode === 'list' ? 'tree-card-body tree-card-body-list' : 'tree-card-body'}>
                 <div className="tree-card-header-row">
                   <h3>{veg.name}</h3>
 
-                  {totalTasks > 0 && (
-                    <span
-                      className={
-                        'tree-progress-pill ' +
-                        (completion === 100
-                          ? 'tree-progress-pill-done'
-                          : '')
-                      }
-                    >
-                      {doneTasks}/{totalTasks} • %{completion}
-                    </span>
-                  )}
+                  <div className="header-right-badges">
+                    {totalTasks > 0 && (
+                      <span
+                        className={
+                          'tree-progress-pill ' +
+                          (completion === 100
+                            ? 'tree-progress-pill-done'
+                            : '')
+                        }
+                      >
+                        {doneTasks}/{totalTasks} • %{completion}
+                      </span>
+                    )}
+
+                    {viewMode === 'list' && veg.maintenance && veg.maintenance.length > 0 && (
+                      <span className="tree-chip maintenance-chip-inline">
+                        📅 {veg.maintenance.length} ay
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="tree-card-meta-row">
                   <span className="tree-chip">Adet: {veg.count}</span>
-                   
+
                     <span className="tree-chip">
     {veg.category === 'yaprakli'
       ? 'Yapraklı'
@@ -2088,14 +2166,41 @@ function VegetableManager({ token }) {
       ? 'Baklagil'
       : 'Genel'}
   </span>
-                   
-                   
+
                 </div>
 
                 {veg.notes && (
                   <p className="tree-card-note">{veg.notes}</p>
                 )}
               </div>
+
+              {viewMode === 'list' && veg.maintenance && veg.maintenance.length > 0 && (() => {
+                const currentMonth = new Date().getMonth() + 1; // 1-12 arası
+                const upcomingMonths = veg.maintenance.filter(m => m.month >= currentMonth).slice(0, 3);
+                const remaining = veg.maintenance.filter(m => m.month >= currentMonth).length - 3;
+
+                return upcomingMonths.length > 0 && (
+                  <div className="list-maintenance-summary list-maintenance-sidebar">
+                    {upcomingMonths.map((m) => (
+                      <div
+                        key={m._id || m.month}
+                        className="maintenance-preview"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMaintenanceToggle(veg._id, m.month, m.completed);
+                        }}
+                      >
+                        <span className="month-badge">{monthNames[m.month - 1]}</span>
+                        <span className="task-preview">{m.tasks?.substring(0, 100)}{m.tasks?.length > 40 ? '...' : ''}</span>
+                        {m.completed && <span className="completed-badge">✓</span>}
+                      </div>
+                    ))}
+                    {remaining > 0 && (
+                      <div className="more-tasks">+{remaining} ay daha</div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
@@ -2268,6 +2373,21 @@ function TreeManager({ token }) {
   const [editingTree, setEditingTree] = useState(null);
   const [selectedTree, setSelectedTree] = useState(null);
 
+  // Görünüm modunu al
+  const [viewMode, setViewMode] = useState('card');
+  useEffect(() => {
+    const settings = loadSettings();
+    setViewMode(settings.appearance?.viewMode || 'card');
+
+    const handleSettingsChange = () => {
+      const newSettings = loadSettings();
+      setViewMode(newSettings.appearance?.viewMode || 'card');
+    };
+
+    window.addEventListener('sg-settings-changed', handleSettingsChange);
+    return () => window.removeEventListener('sg-settings-changed', handleSettingsChange);
+  }, []);
+
   const fetchTrees = async () => {
     setLoading(true);
     setError('');
@@ -2431,7 +2551,7 @@ function TreeManager({ token }) {
       {loading && <p>Yükleniyor...</p>}
       {error && <p className="error-text">{error}</p>}
 
-      <div className="cards-grid">
+      <div className={viewMode === 'list' ? 'items-list' : 'cards-grid'}>
         {trees.map((tree) => {
           const totalTasks = tree.maintenance?.length || 0;
           const doneTasks =
@@ -2443,7 +2563,7 @@ function TreeManager({ token }) {
           return (
             <div
               key={tree._id}
-              className="tree-card"
+              className={viewMode === 'list' ? 'item-row' : 'tree-card'}
               onClick={() => setSelectedTree(tree)}
             >
               <div className="tree-card-image-wrapper">
@@ -2460,29 +2580,37 @@ function TreeManager({ token }) {
 />
               </div>
 
-              <div className="tree-card-body">
+              <div className={viewMode === 'list' ? 'tree-card-body tree-card-body-list' : 'tree-card-body'}>
                 <div className="tree-card-header-row">
                   <h3>{tree.name}</h3>
 
-                  {totalTasks > 0 && (
-                    <span
-                      className={
-                        'tree-progress-pill ' +
-                        (completion === 100
-                          ? 'tree-progress-pill-done'
-                          : '')
-                      }
-                    >
-                      {doneTasks}/{totalTasks} • %{completion}
-                    </span>
-                  )}
+                  <div className="header-right-badges">
+                    {totalTasks > 0 && (
+                      <span
+                        className={
+                          'tree-progress-pill ' +
+                          (completion === 100
+                            ? 'tree-progress-pill-done'
+                            : '')
+                        }
+                      >
+                        {doneTasks}/{totalTasks} • %{completion}
+                      </span>
+                    )}
+
+                    {viewMode === 'list' && tree.maintenance && tree.maintenance.length > 0 && (
+                      <span className="tree-chip maintenance-chip-inline">
+                        📅 {tree.maintenance.length} ay
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="tree-card-meta-row">
                   <span className="tree-chip">Adet: {tree.count}</span>
                   <span className="tree-chip">
 
-                    
+
     {tree.category === 'meyve'
       ? 'Meyve Ağacı'
       : tree.category === 'sus'
@@ -2493,12 +2621,41 @@ function TreeManager({ token }) {
       ? 'Diğer'
       : 'Genel'}
   </span>
+
                 </div>
 
                 {tree.notes && (
                   <p className="tree-card-note">{tree.notes}</p>
                 )}
               </div>
+
+              {viewMode === 'list' && tree.maintenance && tree.maintenance.length > 0 && (() => {
+                const currentMonth = new Date().getMonth() + 1; // 1-12 arası
+                const upcomingMonths = tree.maintenance.filter(m => m.month >= currentMonth).slice(0, 3);
+                const remaining = tree.maintenance.filter(m => m.month >= currentMonth).length - 3;
+
+                return upcomingMonths.length > 0 && (
+                  <div className="list-maintenance-summary list-maintenance-sidebar">
+                    {upcomingMonths.map((m) => (
+                      <div
+                        key={m._id || m.month}
+                        className="maintenance-preview"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMaintenanceToggle(tree._id, m.month, m.completed);
+                        }}
+                      >
+                        <span className="month-badge">{monthNames[m.month - 1]}</span>
+                        <span className="task-preview">{m.tasks?.substring(0, 40)}{m.tasks?.length > 40 ? '...' : ''}</span>
+                        {m.completed && <span className="completed-badge">✓</span>}
+                      </div>
+                    ))}
+                    {remaining > 0 && (
+                      <div className="more-tasks">+{remaining} ay daha</div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
@@ -3592,6 +3749,11 @@ function Home({ token }) {
   const [veggies, setVeggies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [profileInfo, setProfileInfo] = useState({
+    gardenName: '',
+    gardenSize: 0,
+    experienceLevel: 'beginner'
+  });
 
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
@@ -3631,6 +3793,30 @@ function Home({ token }) {
 
     fetchAll();
   }, [token]);
+
+  // Profil bilgilerini yükle
+  useEffect(() => {
+    const loadProfile = () => {
+      const settings = loadSettings();
+      if (settings && settings.profile) {
+        setProfileInfo({
+          gardenName: settings.profile.gardenName || '',
+          gardenSize: settings.profile.gardenSize || 0,
+          experienceLevel: settings.profile.experienceLevel || 'beginner'
+        });
+      }
+    };
+
+    loadProfile();
+
+    // Ayarlar değiştiğinde profil bilgilerini güncelle
+    const handleSettingsChange = () => {
+      loadProfile();
+    };
+
+    window.addEventListener('sg-settings-changed', handleSettingsChange);
+    return () => window.removeEventListener('sg-settings-changed', handleSettingsChange);
+  }, []);
 
   let treeTasks = 0;
   let treeDone = 0;
@@ -3763,6 +3949,76 @@ const treePercent =
     }
   };
 
+  // Mevsim belirleme
+  const getSeason = (month) => {
+    if (month >= 3 && month <= 5) return { name: '🌸 İlkbahar', tip: 'Ekim ve budama zamanı!' };
+    if (month >= 6 && month <= 8) return { name: '☀️ Yaz', tip: 'Sulama ve hasat mevsimi!' };
+    if (month >= 9 && month <= 11) return { name: '🍂 Sonbahar', tip: 'Toprak hazırlığı zamanı!' };
+    return { name: '❄️ Kış', tip: 'Dinlenme ve planlama dönemi!' };
+  };
+
+  const season = getSeason(currentMonth);
+
+  // Acil görevleri bul (bu ay tamamlanmamış ve gerçekten kritik olanlar)
+  const urgentTasks = [];
+
+  // Ayarlardan sezon bilgilerini al
+  const settings = loadSettings();
+  const wateringSeasonStart = settings.maintenance?.wateringSeasonStart || 4;
+  const wateringSeasonEnd = settings.maintenance?.wateringSeasonEnd || 10;
+  const fertilizingSeasonStart = settings.maintenance?.fertilizingSeasonStart || 3;
+  const fertilizingSeasonEnd = settings.maintenance?.fertilizingSeasonEnd || 10;
+
+  const isWateringSeason = currentMonth >= wateringSeasonStart && currentMonth <= wateringSeasonEnd;
+  const isFertilizingSeason = currentMonth >= fertilizingSeasonStart && currentMonth <= fertilizingSeasonEnd;
+
+  // Sezon başlangıç kontrolü
+  const isWateringSeasonStart = currentMonth === wateringSeasonStart;
+  const isFertilizingSeasonStart = currentMonth === fertilizingSeasonStart;
+
+  // Ağaçlar için acil görevler: budama, ilaçlama, gübreleme (sezon içindeyse), sulama (sezon içindeyse)
+  trees.forEach((t) => {
+    const monthTask = t.maintenance?.find(m => m.month === currentMonth && !m.completed);
+    if (monthTask) {
+      const taskText = monthTask.tasks || '';
+
+      // Gelecek sezon/planlama gibi ifadeler varsa acil sayma
+      const isFuturePlanning = /gelecek|planlama|plan yap|hazırlık|düşün/i.test(taskText);
+      if (isFuturePlanning) return;
+
+      // Budama ve ilaçlama her zaman acil
+      const hasPruningOrSpray = /budama|ilaç/i.test(taskText);
+
+      // Gübreleme sadece sezon içindeyse acil
+      const hasFertilizing = /gübre/i.test(taskText);
+      const isFertilizingUrgent = hasFertilizing && isFertilizingSeason;
+
+      // Sulama sadece sezon içindeyse acil
+      const hasWatering = /sulama|sulam/i.test(taskText);
+      const isWateringUrgent = hasWatering && isWateringSeason;
+
+      if (hasPruningOrSpray || isFertilizingUrgent || isWateringUrgent) {
+        urgentTasks.push({ type: 'Ağaç', name: t.name, task: taskText });
+      }
+    }
+  });
+
+  // Sebzeler için acil görevler: sadece ekim ve ilaçlama (zamanında yapılması kritik)
+  veggies.forEach((v) => {
+    const monthTask = v.maintenance?.find(m => m.month === currentMonth && !m.completed);
+    if (monthTask) {
+      const taskText = monthTask.tasks || '';
+      // Sadece ekim veya ilaçlama içeren görevleri acil say
+      const isUrgent = /ekim|ilaç|tohum|fide/i.test(taskText);
+      // Gelecek sezon/planlama gibi ifadeler varsa acil sayma
+      const isFuturePlanning = /gelecek|planlama|plan yap|hazırlık|düşün/i.test(taskText);
+
+      if (isUrgent && !isFuturePlanning) {
+        urgentTasks.push({ type: 'Sebze', name: v.name, task: taskText });
+      }
+    }
+  });
+
   return (
     <div className="home-page">
       <div className="home-header-row">
@@ -3771,10 +4027,71 @@ const treePercent =
           <p className="home-date-line">
             📅 {dateStr} · ⏰ {timeStr}
           </p>
-          <p className="muted">
-            {monthNames[currentMonth - 1]} ayı için görevlerinin özetini
-            aşağıda görebilirsin.
-          </p>
+
+          <div className="today-summary-grid">
+            <div className="summary-item">
+              <span className="summary-label">Mevsim</span>
+              <span className="summary-value">{season.name}</span>
+              <span className="summary-tip">{season.tip}</span>
+            </div>
+
+            <div className="summary-item">
+              <span className="summary-label">Bu Ay</span>
+              <span className="summary-value">
+                {totalDone}/{totalTasks} Görev
+              </span>
+              <span className="summary-tip">
+                {overallPercent === 100 ? '🎉 Tamamlandı!' : `%${overallPercent} tamamlandı`}
+              </span>
+            </div>
+          </div>
+
+          {/* Sezon başlangıç uyarıları */}
+          {(isWateringSeasonStart || isFertilizingSeasonStart) && (
+            <div className="season-alert-box">
+              <div className="season-alert-header">🌱 Sezon Başlangıç Uyarıları</div>
+              {isWateringSeasonStart && (
+                <div className="season-alert-item">
+                  💧 <strong>Sulama sezonu başladı!</strong> Düzenli sulama zamanı.
+                </div>
+              )}
+              {isFertilizingSeasonStart && (
+                <div className="season-alert-item">
+                  🌿 <strong>Gübreleme sezonu başladı!</strong> Bitkilerinizi gübrelemeye başlayabilirsiniz.
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className={urgentTasks.length > 0 ? 'urgent-tasks-box urgent' : 'urgent-tasks-box normal'}>
+            <div className="urgent-header">
+              {urgentTasks.length > 0 ? (
+                <>⚠️ Acil Görevler ({urgentTasks.length})</>
+              ) : (
+                <>✅ Tüm Önemli Görevler Tamamlandı!</>
+              )}
+            </div>
+            {urgentTasks.length > 0 ? (
+              <div className="urgent-list">
+                {urgentTasks.slice(0, 3).map((task, idx) => (
+                  <div key={idx} className="urgent-item">
+                    <div className="urgent-item-header">
+                      <span className="urgent-type">{task.type}</span>
+                      <span className="urgent-name">{task.name}</span>
+                    </div>
+                    <div className="urgent-task-detail">{task.task}</div>
+                  </div>
+                ))}
+                {urgentTasks.length > 3 && (
+                  <div className="urgent-more">+{urgentTasks.length - 3} görev daha</div>
+                )}
+              </div>
+            ) : (
+              <div className="urgent-success-message">
+                Bu ay için tüm önemli bakım görevlerini tamamladın! 🎉
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="home-card">
@@ -3782,14 +4099,43 @@ const treePercent =
           {loading && <p>Yükleniyor...</p>}
           {error && <p className="error-text">{error}</p>}
           {!loading && !error && (
-            <ul className="home-stats-list">
-              <li>
-                🌳 Toplam ağaç: <strong>{trees.length}</strong>
-              </li>
-              <li>
-                🥬 Toplam sebze: <strong>{veggies.length}</strong>
-              </li>
-            </ul>
+            <>
+              {profileInfo.gardenName && (
+                <div className="garden-name-display">
+                  🏡 {profileInfo.gardenName}
+                </div>
+              )}
+              <div className="garden-stats-grid">
+                {profileInfo.gardenSize > 0 && (
+                  <div className="garden-stat-box">
+                    <div className="garden-stat-icon">📏</div>
+                    <div className="garden-stat-label">Alan</div>
+                    <div className="garden-stat-value">{profileInfo.gardenSize} m²</div>
+                  </div>
+                )}
+                {profileInfo.experienceLevel && (
+                  <div className="garden-stat-box">
+                    <div className="garden-stat-icon">⭐</div>
+                    <div className="garden-stat-label">Deneyim</div>
+                    <div className="garden-stat-value">
+                      {profileInfo.experienceLevel === 'beginner' && 'Yeni Başlayan'}
+                      {profileInfo.experienceLevel === 'intermediate' && 'Orta Seviye'}
+                      {profileInfo.experienceLevel === 'advanced' && 'İleri Seviye'}
+                    </div>
+                  </div>
+                )}
+                <div className="garden-stat-box">
+                  <div className="garden-stat-icon">🌳</div>
+                  <div className="garden-stat-label">Toplam Ağaç</div>
+                  <div className="garden-stat-value">{trees.reduce((sum, t) => sum + (t.count || 0), 0)}</div>
+                </div>
+                <div className="garden-stat-box">
+                  <div className="garden-stat-icon">🥬</div>
+                  <div className="garden-stat-label">Toplam Sebze</div>
+                  <div className="garden-stat-value">{veggies.reduce((sum, v) => sum + (v.count || 0), 0)}</div>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -3894,6 +4240,11 @@ function Settings({ token }) {
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [message, setMessage] = useState('');
+  const [testingAutoTask, setTestingAutoTask] = useState(false);
+  const [testingHarvest, setTestingHarvest] = useState(false);
+  const [testingReminder, setTestingReminder] = useState(false);
+  const [clearingLog, setClearingLog] = useState(false);
+  const [testResults, setTestResults] = useState(null);
 
   // Ayarları API'den yükle
   useEffect(() => {
@@ -3911,6 +4262,16 @@ function Settings({ token }) {
         if (res.ok) {
           const data = await res.json();
           setSettings(data);
+          // API'den gelen ayarları localStorage'a da kaydet
+          saveSettings(data);
+          // Şehir bilgisini de ayrıca kaydet (Hava durumu için)
+          if (data.weather?.city) {
+            try {
+              localStorage.setItem('sg_city', data.weather.city);
+            } catch (e) {
+              console.warn('sg_city kaydedilemedi:', e);
+            }
+          }
         } else {
           console.error('Ayarlar yüklenemedi');
           // Hata durumunda varsayılan ayarları kullan
@@ -3936,6 +4297,9 @@ function Settings({ token }) {
     setSettings(next);
     setSaving(true);
 
+    // localStorage'a da kaydet
+    saveSettings(next);
+
     try {
       await fetch(`${API_URL}/settings`, {
         method: 'PUT',
@@ -3957,6 +4321,7 @@ function Settings({ token }) {
   // Tek bir ayarı güncelle (PATCH)
   const updateSingleSetting = async (path, value) => {
     // Optimistic update
+    let updatedSettings;
     setSettings((prev) => {
       const next = { ...prev };
       const keys = path.split('.');
@@ -3965,8 +4330,20 @@ function Settings({ token }) {
         obj = obj[keys[i]];
       }
       obj[keys[keys.length - 1]] = value;
+      updatedSettings = next;
       return next;
     });
+
+    // localStorage'a da kaydet
+    if (updatedSettings) {
+      saveSettings(updatedSettings);
+
+      // Ayarları hemen uygula (event sistemine ek olarak)
+      applySettingsImmediately(updatedSettings);
+
+      // Ayarların uygulanması için event gönder
+      window.dispatchEvent(new Event('sg-settings-changed'));
+    }
 
     setSaving(true);
 
@@ -3981,9 +4358,46 @@ function Settings({ token }) {
       });
 
       setTimeout(() => setSaving(false), 400);
+
+      // Görünüm modu değiştiğinde sayfayı yenile
+      if (path === 'appearance.viewMode') {
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
     } catch (err) {
       console.error('Ayar kaydedilemedi:', err);
       setSaving(false);
+    }
+  };
+
+  // Ayarları anında uygula (CSS sınıfları vb.)
+  const applySettingsImmediately = (settings) => {
+    if (!settings || !settings.appearance) return;
+
+    // Tema ayarı
+    if (settings.appearance.theme) {
+      const theme = settings.appearance.theme;
+      document.body.classList.remove('theme-light', 'theme-dark', 'theme-auto');
+
+      if (theme === 'auto') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.body.classList.add(prefersDark ? 'theme-dark' : 'theme-light');
+      } else {
+        document.body.classList.add(`theme-${theme}`);
+      }
+    }
+
+    // Renk şeması
+    if (settings.appearance.colorScheme) {
+      document.body.classList.remove('color-green', 'color-blue', 'color-brown', 'color-purple');
+      document.body.classList.add(`color-${settings.appearance.colorScheme}`);
+    }
+
+    // Yazı boyutu
+    if (settings.appearance.fontSize) {
+      document.body.classList.remove('font-small', 'font-medium', 'font-large');
+      document.body.classList.add(`font-${settings.appearance.fontSize}`);
     }
   };
 
@@ -4072,8 +4486,167 @@ function Settings({ token }) {
   };
   const handleCityChange = (value) => {
     updateSingleSetting('weather.city', value);
+    // localStorage'a da kaydet (WeatherTab ve WeatherWidget bundan okuyor)
+    try {
+      localStorage.setItem('sg_city', value);
+    } catch (e) {
+      console.warn('localStorage kaydedilemedi:', e);
+    }
     // Hava durumu widget'ına haber ver
     window.dispatchEvent(new Event('sg-city-changed'));
+  };
+
+  // Test fonksiyonları
+  const handleTestAutoTask = async () => {
+    if (!token) {
+      setMessage('Önce giriş yapmalısın.');
+      return;
+    }
+    setTestingAutoTask(true);
+    setMessage('');
+    setTestResults(null);
+    try {
+      const res = await fetch(`${API_URL}/test/auto-task`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Test başarısız');
+      }
+
+      setTestResults({
+        type: 'auto-task',
+        success: true,
+        data: data
+      });
+      setMessage(data.message);
+    } catch (err) {
+      console.error('Otomatik görev testi hatası:', err);
+      setMessage(err.message || 'Test başarısız');
+      setTestResults({
+        type: 'auto-task',
+        success: false,
+        error: err.message
+      });
+    } finally {
+      setTestingAutoTask(false);
+    }
+  };
+
+  const handleTestHarvestReminder = async () => {
+    if (!token) {
+      setMessage('Önce giriş yapmalısın.');
+      return;
+    }
+    setTestingHarvest(true);
+    setMessage('');
+    setTestResults(null);
+    try {
+      const res = await fetch(`${API_URL}/test/harvest-reminder`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Test başarısız');
+      }
+
+      setTestResults({
+        type: 'harvest',
+        success: true,
+        data: data
+      });
+      setMessage(data.message);
+    } catch (err) {
+      console.error('Hasat hatırlatma testi hatası:', err);
+      setMessage(err.message || 'Test başarısız');
+      setTestResults({
+        type: 'harvest',
+        success: false,
+        error: err.message
+      });
+    } finally {
+      setTestingHarvest(false);
+    }
+  };
+
+  const handleTestDailyReminder = async () => {
+    if (!token) {
+      setMessage('Önce giriş yapmalısın.');
+      return;
+    }
+    setTestingReminder(true);
+    setMessage('');
+    setTestResults(null);
+    try {
+      const res = await fetch(`${API_URL}/test/daily-reminder`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Test başarısız');
+      }
+
+      setTestResults({
+        type: 'daily-reminder',
+        success: true,
+        data: data
+      });
+      setMessage(data.message);
+    } catch (err) {
+      console.error('Günlük hatırlatma testi hatası:', err);
+      setMessage(err.message || 'Test başarısız');
+      setTestResults({
+        type: 'daily-reminder',
+        success: false,
+        error: err.message
+      });
+    } finally {
+      setTestingReminder(false);
+    }
+  };
+
+  const handleClearReminderLog = async () => {
+    if (!token) {
+      setMessage('Önce giriş yapmalısın.');
+      return;
+    }
+    setClearingLog(true);
+    setMessage('');
+    setTestResults(null);
+    try {
+      const res = await fetch(`${API_URL}/test/daily-reminder-log`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Temizleme başarısız');
+      }
+
+      setTestResults({
+        type: 'clear-log',
+        success: true,
+        data: data
+      });
+      setMessage(data.message);
+    } catch (err) {
+      console.error('Log temizleme hatası:', err);
+      setMessage(err.message || 'Temizleme başarısız');
+      setTestResults({
+        type: 'clear-log',
+        success: false,
+        error: err.message
+      });
+    } finally {
+      setClearingLog(false);
+    }
   };
 
   // Loading state
@@ -4109,8 +4682,212 @@ function Settings({ token }) {
       </div>
 
       <div className="settings-grid">
-        {/* Bildirim & Hatırlatma */}
+        {/* Profil & Kişiselleştirme */}
         <section className="settings-section">
+          <h3>👤 Profil &amp; Kişiselleştirme</h3>
+          <p className="settings-section-desc">
+            Bahçe bilgilerini ve deneyim seviyeni belirle.
+          </p>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Bahçe adı</div>
+              <div className="settings-item-desc">
+                Bahçene özel bir isim ver
+              </div>
+            </div>
+            <input
+              type="text"
+              className="settings-select"
+              placeholder="örn: Köy Bahçesi, Balkon Bahçesi"
+              value={settings.profile.gardenName}
+              onChange={(e) => handleSelectChange('profile.gardenName', e.target.value)}
+              maxLength="50"
+            />
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Bahçe büyüklüğü (m²)</div>
+              <div className="settings-item-desc">
+                Bahçenin toplam alanı
+              </div>
+            </div>
+            <input
+              type="number"
+              className="settings-select"
+              placeholder="örn: 500"
+              value={settings.profile.gardenSize}
+              onChange={(e) => handleNumberChange('profile.gardenSize', e.target.value)}
+              min="0"
+              max="100000"
+            />
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Deneyim seviyesi</div>
+              <div className="settings-item-desc">
+                Bahçecilik deneyimini belirle (önerileri buna göre ayarlarız)
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.profile.experienceLevel}
+              onChange={(e) => handleSelectChange('profile.experienceLevel', e.target.value)}
+            >
+              <option value="beginner">Yeni Başlayan</option>
+              <option value="intermediate">Orta Seviye</option>
+              <option value="advanced">İleri Seviye</option>
+            </select>
+          </div>
+        </section>
+
+       
+        {/* Görünüm & Tema */}
+        <section className="settings-section">
+          <h3>🎨 Görünüm &amp; Tema</h3>
+          <p className="settings-section-desc">
+            Uygulamanın görünümünü özelleştir.
+          </p>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Tema modu</div>
+              <div className="settings-item-desc">
+                Aydınlık, karanlık veya otomatik tema seç
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.appearance.theme}
+              onChange={(e) => handleSelectChange('appearance.theme', e.target.value)}
+            >
+              <option value="light">Aydınlık</option>
+              <option value="dark">Karanlık</option>
+              <option value="auto">Otomatik (sistem ayarı)</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Renk teması</div>
+              <div className="settings-item-desc">
+                Ana renk paletini seç
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.appearance.colorScheme}
+              onChange={(e) => handleSelectChange('appearance.colorScheme', e.target.value)}
+            >
+              <option value="green">Yeşil (Varsayılan)</option>
+              <option value="blue">Mavi</option>
+              <option value="brown">Kahverengi</option>
+              <option value="purple">Mor</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Yazı boyutu</div>
+              <div className="settings-item-desc">
+                Uygulama genelinde yazı boyutunu ayarla
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.appearance.fontSize}
+              onChange={(e) => handleSelectChange('appearance.fontSize', e.target.value)}
+            >
+              <option value="small">Küçük</option>
+              <option value="medium">Normal</option>
+              <option value="large">Büyük</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Görünüm modu</div>
+              <div className="settings-item-desc">
+                Ağaç ve sebzeleri kart veya liste olarak göster
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.appearance.viewMode}
+              onChange={(e) => handleSelectChange('appearance.viewMode', e.target.value)}
+            >
+              <option value="card">Kart Görünümü</option>
+              <option value="list">Liste Görünümü</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Grafikler varsayılan açık</div>
+              <div className="settings-item-desc">
+                Rapor sayfasında grafikler başlangıçta açık olsun
+              </div>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings.appearance.chartsDefaultOpen}
+                onChange={() => handleToggle('appearance.chartsDefaultOpen')}
+              />
+              <span className="slider" />
+            </label>
+          </div>
+        </section>
+
+
+{/* Tarih & Saat */}
+        <section className="settings-section">
+          <h3>📅 Tarih &amp; Saat</h3>
+          <p className="settings-section-desc">
+            Uygulama içinde görünen tarih ve saat biçimini belirle.
+          </p>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Tarih formatı</div>
+              <div className="settings-item-desc">
+                Tarih gösterimlerinde kullanılacak format
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.ui.dateFormat}
+              onChange={(e) => handleSelectChange('ui.dateFormat', e.target.value)}
+            >
+              <option value="dd.MM.yyyy">27.11.2025</option>
+              <option value="yyyy-MM-dd">2025-11-27</option>
+              <option value="dd MMMM yyyy">27 Kasım 2025</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Saat formatı</div>
+              <div className="settings-item-desc">
+                Saat gösterimlerinde kullanılacak format
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.ui.timeFormat}
+              onChange={(e) => handleSelectChange('ui.timeFormat', e.target.value)}
+            >
+              <option value="HH:mm">24 saat (14:30)</option>
+              <option value="hh:mm">12 saat (02:30)</option>
+            </select>
+          </div>
+        </section>
+
+
+ {/* Bildirim & Hatırlatma */}
+        <section className="settings-section settings-section-wide">
           <h3>📬 Bildirim &amp; Hatırlatma</h3>
           <p className="settings-section-desc">
             Bildirim ve hatırlatma tercihlerini ayarla.
@@ -4256,104 +5033,6 @@ function Settings({ token }) {
             </label>
           </div>
         </section>
-
-        {/* Görünüm & Tema */}
-        <section className="settings-section">
-          <h3>🎨 Görünüm &amp; Tema</h3>
-          <p className="settings-section-desc">
-            Uygulamanın görünümünü özelleştir.
-          </p>
-
-          <div className="settings-item">
-            <div>
-              <div className="settings-item-title">Tema modu</div>
-              <div className="settings-item-desc">
-                Aydınlık, karanlık veya otomatik tema seç
-              </div>
-            </div>
-            <select
-              className="settings-select"
-              value={settings.appearance.theme}
-              onChange={(e) => handleSelectChange('appearance.theme', e.target.value)}
-            >
-              <option value="light">Aydınlık</option>
-              <option value="dark">Karanlık</option>
-              <option value="auto">Otomatik (sistem ayarı)</option>
-            </select>
-          </div>
-
-          <div className="settings-item">
-            <div>
-              <div className="settings-item-title">Renk teması</div>
-              <div className="settings-item-desc">
-                Ana renk paletini seç
-              </div>
-            </div>
-            <select
-              className="settings-select"
-              value={settings.appearance.colorScheme}
-              onChange={(e) => handleSelectChange('appearance.colorScheme', e.target.value)}
-            >
-              <option value="green">Yeşil (Varsayılan)</option>
-              <option value="blue">Mavi</option>
-              <option value="brown">Kahverengi</option>
-              <option value="purple">Mor</option>
-            </select>
-          </div>
-
-          <div className="settings-item">
-            <div>
-              <div className="settings-item-title">Yazı boyutu</div>
-              <div className="settings-item-desc">
-                Uygulama genelinde yazı boyutunu ayarla
-              </div>
-            </div>
-            <select
-              className="settings-select"
-              value={settings.appearance.fontSize}
-              onChange={(e) => handleSelectChange('appearance.fontSize', e.target.value)}
-            >
-              <option value="small">Küçük</option>
-              <option value="medium">Normal</option>
-              <option value="large">Büyük</option>
-            </select>
-          </div>
-
-          <div className="settings-item">
-            <div>
-              <div className="settings-item-title">Görünüm modu</div>
-              <div className="settings-item-desc">
-                Ağaç ve sebzeleri kart veya liste olarak göster
-              </div>
-            </div>
-            <select
-              className="settings-select"
-              value={settings.appearance.viewMode}
-              onChange={(e) => handleSelectChange('appearance.viewMode', e.target.value)}
-            >
-              <option value="card">Kart Görünümü</option>
-              <option value="list">Liste Görünümü</option>
-            </select>
-          </div>
-
-          <div className="settings-item">
-            <div>
-              <div className="settings-item-title">Grafikler varsayılan açık</div>
-              <div className="settings-item-desc">
-                Rapor sayfasında grafikler başlangıçta açık olsun
-              </div>
-            </div>
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={settings.appearance.chartsDefaultOpen}
-                onChange={() => handleToggle('appearance.chartsDefaultOpen')}
-              />
-              <span className="slider" />
-            </label>
-          </div>
-        </section>
-
         {/* Hava Durumu */}
         <section className="settings-section">
           <h3>🌤️ Hava Durumu</h3>
@@ -4492,17 +5171,17 @@ function Settings({ token }) {
         </section>
 
         {/* Bakım Planlama */}
-        <section className="settings-section">
+        <section className="settings-section settings-section-widel">
           <h3>🌱 Bakım Planlama</h3>
           <p className="settings-section-desc">
-            Otomatik bakım planlama ayarlarını düzenle.
+            Otomatik bakım planlama, sulama ve gübreleme ayarlarını düzenle.
           </p>
 
           <div className="settings-item">
             <div>
-              <div className="settings-item-title">Varsayılan sulama sıklığı</div>
+              <div className="settings-item-title">Varsayılan sulama sıklığı (gün)</div>
               <div className="settings-item-desc">
-                Yeni eklenen bitkiler için otomatik sulama aralığı (gün)
+                Yeni eklenen bitkiler için otomatik sulama aralığı
               </div>
             </div>
             <input
@@ -4517,9 +5196,63 @@ function Settings({ token }) {
 
           <div className="settings-item">
             <div>
-              <div className="settings-item-title">Varsayılan gübreleme periyodu</div>
+              <div className="settings-item-title">Sulama sezonu başlangıç ayı</div>
               <div className="settings-item-desc">
-                Yeni eklenen bitkiler için otomatik gübreleme aralığı (gün)
+                Sulama sezonunun başladığı ay
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.maintenance.wateringSeasonStart}
+              onChange={(e) => handleNumberChange('maintenance.wateringSeasonStart', e.target.value)}
+            >
+              <option value="1">Ocak</option>
+              <option value="2">Şubat</option>
+              <option value="3">Mart</option>
+              <option value="4">Nisan</option>
+              <option value="5">Mayıs</option>
+              <option value="6">Haziran</option>
+              <option value="7">Temmuz</option>
+              <option value="8">Ağustos</option>
+              <option value="9">Eylül</option>
+              <option value="10">Ekim</option>
+              <option value="11">Kasım</option>
+              <option value="12">Aralık</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Sulama sezonu bitiş ayı</div>
+              <div className="settings-item-desc">
+                Sulama sezonunun bittiği ay
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.maintenance.wateringSeasonEnd}
+              onChange={(e) => handleNumberChange('maintenance.wateringSeasonEnd', e.target.value)}
+            >
+              <option value="1">Ocak</option>
+              <option value="2">Şubat</option>
+              <option value="3">Mart</option>
+              <option value="4">Nisan</option>
+              <option value="5">Mayıs</option>
+              <option value="6">Haziran</option>
+              <option value="7">Temmuz</option>
+              <option value="8">Ağustos</option>
+              <option value="9">Eylül</option>
+              <option value="10">Ekim</option>
+              <option value="11">Kasım</option>
+              <option value="12">Aralık</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Varsayılan gübreleme periyodu (gün)</div>
+              <div className="settings-item-desc">
+                Yeni eklenen bitkiler için otomatik gübreleme aralığı
               </div>
             </div>
             <input
@@ -4530,6 +5263,60 @@ function Settings({ token }) {
               min="7"
               max="365"
             />
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Gübreleme sezonu başlangıç ayı</div>
+              <div className="settings-item-desc">
+                Gübreleme sezonunun başladığı ay
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.maintenance.fertilizingSeasonStart}
+              onChange={(e) => handleNumberChange('maintenance.fertilizingSeasonStart', e.target.value)}
+            >
+              <option value="1">Ocak</option>
+              <option value="2">Şubat</option>
+              <option value="3">Mart</option>
+              <option value="4">Nisan</option>
+              <option value="5">Mayıs</option>
+              <option value="6">Haziran</option>
+              <option value="7">Temmuz</option>
+              <option value="8">Ağustos</option>
+              <option value="9">Eylül</option>
+              <option value="10">Ekim</option>
+              <option value="11">Kasım</option>
+              <option value="12">Aralık</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Gübreleme sezonu bitiş ayı</div>
+              <div className="settings-item-desc">
+                Gübreleme sezonunun bittiği ay
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.maintenance.fertilizingSeasonEnd}
+              onChange={(e) => handleNumberChange('maintenance.fertilizingSeasonEnd', e.target.value)}
+            >
+              <option value="1">Ocak</option>
+              <option value="2">Şubat</option>
+              <option value="3">Mart</option>
+              <option value="4">Nisan</option>
+              <option value="5">Mayıs</option>
+              <option value="6">Haziran</option>
+              <option value="7">Temmuz</option>
+              <option value="8">Ağustos</option>
+              <option value="9">Eylül</option>
+              <option value="10">Ekim</option>
+              <option value="11">Kasım</option>
+              <option value="12">Aralık</option>
+            </select>
           </div>
 
           <div className="settings-item">
@@ -4567,113 +5354,141 @@ function Settings({ token }) {
           </div>
         </section>
 
-        {/* Profil & Kişiselleştirme */}
-        <section className="settings-section">
-          <h3>👤 Profil &amp; Kişiselleştirme</h3>
+ 
+
+       
+
+        
+
+        {/* Test Özellikleri */}
+        <section className="settings-section settings-section-wide">
+          <h3>🧪 Test Özellikleri</h3>
           <p className="settings-section-desc">
-            Bahçe bilgilerini ve deneyim seviyeni belirle.
+            Bakım planlama özelliklerini test et ve sonuçları gör.
           </p>
 
           <div className="settings-item">
             <div>
-              <div className="settings-item-title">Bahçe adı</div>
+              <div className="settings-item-title">Otomatik görev oluşturma testi</div>
               <div className="settings-item-desc">
-                Bahçene özel bir isim ver
+                Test ağacı oluşturur ve otomatik görevlerin çalışıp çalışmadığını kontrol eder
               </div>
             </div>
-            <input
-              type="text"
-              className="settings-select"
-              placeholder="örn: Köy Bahçesi, Balkon Bahçesi"
-              value={settings.profile.gardenName}
-              onChange={(e) => handleSelectChange('profile.gardenName', e.target.value)}
-              maxLength="50"
-            />
-          </div>
-
-          <div className="settings-item">
-            <div>
-              <div className="settings-item-title">Bahçe büyüklüğü (m²)</div>
-              <div className="settings-item-desc">
-                Bahçenin toplam alanı
-              </div>
-            </div>
-            <input
-              type="number"
-              className="settings-select"
-              placeholder="örn: 500"
-              value={settings.profile.gardenSize}
-              onChange={(e) => handleNumberChange('profile.gardenSize', e.target.value)}
-              min="0"
-              max="100000"
-            />
-          </div>
-
-          <div className="settings-item">
-            <div>
-              <div className="settings-item-title">Deneyim seviyesi</div>
-              <div className="settings-item-desc">
-                Bahçecilik deneyimini belirle (önerileri buna göre ayarlarız)
-              </div>
-            </div>
-            <select
-              className="settings-select"
-              value={settings.profile.experienceLevel}
-              onChange={(e) => handleSelectChange('profile.experienceLevel', e.target.value)}
+            <button
+              type="button"
+              className="btn primary"
+              onClick={handleTestAutoTask}
+              disabled={testingAutoTask}
             >
-              <option value="beginner">Yeni Başlayan</option>
-              <option value="intermediate">Orta Seviye</option>
-              <option value="advanced">İleri Seviye</option>
-            </select>
+              {testingAutoTask ? 'Test ediliyor...' : 'Test Et'}
+            </button>
           </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Hasat hatırlatmaları testi</div>
+              <div className="settings-item-desc">
+                Test sebze oluşturur ve hasat görevlerinin eklenip eklenmediğini kontrol eder
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={handleTestHarvestReminder}
+              disabled={testingHarvest}
+            >
+              {testingHarvest ? 'Test ediliyor...' : 'Test Et'}
+            </button>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Günlük hatırlatma testi</div>
+              <div className="settings-item-desc">
+                Hatırlatma saati ayarını test eder ve bildirim gönderir (bugünkü log otomatik temizlenir)
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={handleTestDailyReminder}
+              disabled={testingReminder}
+            >
+              {testingReminder ? 'Test ediliyor...' : 'Test Et'}
+            </button>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Hatırlatma logunu temizle</div>
+              <div className="settings-item-desc">
+                Bugünkü hatırlatma logunu siler, gerçek zamanda test için kullanın
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={handleClearReminderLog}
+              disabled={clearingLog}
+            >
+              {clearingLog ? 'Temizleniyor...' : 'Logu Temizle'}
+            </button>
+          </div>
+
+          {testResults && testResults.success && (
+            <div className="test-results-box">
+              <h4>📊 Test Sonuçları</h4>
+              {testResults.type === 'auto-task' && (
+                <div>
+                  <p><strong>✅ {testResults.data.message}</strong></p>
+                  <ul>
+                    <li>Oluşturulan görev sayısı: <strong>{testResults.data.createdTasks}</strong></li>
+                    <li>Sulama sıklığı: {testResults.data.settings.wateringFrequency} gün</li>
+                    <li>Gübreleme periyodu: {testResults.data.settings.fertilizingPeriod} gün</li>
+                    <li>Sulama sezonu: Ay {testResults.data.settings.wateringSeason}</li>
+                  </ul>
+                  <p className="test-note">
+                    💡 Ağaçlar sekmesinde "Test Ağacı" isimli bitkiyi kontrol edin.
+                  </p>
+                </div>
+              )}
+              {testResults.type === 'harvest' && (
+                <div>
+                  <p><strong>✅ {testResults.data.message}</strong></p>
+                  <ul>
+                    <li>Toplam görev: <strong>{testResults.data.totalTasks}</strong></li>
+                    <li>Hasat görevi: <strong>{testResults.data.harvestTasks}</strong></li>
+                    <li>Hasat ayları: {testResults.data.harvestMonths.join(', ')}</li>
+                  </ul>
+                  <p className="test-note">
+                    💡 Sebzeler sekmesinde "Test Domates" isimli bitkiyi kontrol edin.
+                  </p>
+                </div>
+              )}
+              {testResults.type === 'daily-reminder' && (
+                <div>
+                  <p><strong>✅ {testResults.data.message}</strong></p>
+                  <p className="test-note">
+                    💡 Server konsol loglarını kontrol edin. Hatırlatma saati ayarınıza göre bildirim gönderildi mi görebilirsiniz.
+                  </p>
+                </div>
+              )}
+              {testResults.type === 'clear-log' && (
+                <div>
+                  <p><strong>✅ {testResults.data.message}</strong></p>
+                  {testResults.data.cleared && (
+                    <p className="test-note">
+                      💡 Artık Cron job bir sonraki 10 dakikada çalıştığında (hatırlatma saati uygunsa) bildirim alabilirsiniz.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </section>
-
-        {/* Tarih & Saat */}
+{/* Veri yönetimi */}
         <section className="settings-section">
-          <h3>📅 Tarih &amp; Saat</h3>
-          <p className="settings-section-desc">
-            Uygulama içinde görünen tarih ve saat biçimini belirle.
-          </p>
-
-          <div className="settings-item">
-            <div>
-              <div className="settings-item-title">Tarih formatı</div>
-              <div className="settings-item-desc">
-                Tarih gösterimlerinde kullanılacak format
-              </div>
-            </div>
-            <select
-              className="settings-select"
-              value={settings.ui.dateFormat}
-              onChange={(e) => handleSelectChange('ui.dateFormat', e.target.value)}
-            >
-              <option value="dd.MM.yyyy">27.11.2025</option>
-              <option value="yyyy-MM-dd">2025-11-27</option>
-              <option value="dd MMMM yyyy">27 Kasım 2025</option>
-            </select>
-          </div>
-
-          <div className="settings-item">
-            <div>
-              <div className="settings-item-title">Saat formatı</div>
-              <div className="settings-item-desc">
-                Saat gösterimlerinde kullanılacak format
-              </div>
-            </div>
-            <select
-              className="settings-select"
-              value={settings.ui.timeFormat}
-              onChange={(e) => handleSelectChange('ui.timeFormat', e.target.value)}
-            >
-              <option value="HH:mm">24 saat (14:30)</option>
-              <option value="hh:mm">12 saat (02:30)</option>
-            </select>
-          </div>
-        </section>
-
-        {/* Veri yönetimi */}
-        <section className="settings-section">
-          <h3>Veri Yönetimi</h3>
+          <h3>📦 Veri Yönetimi</h3>
           <p className="settings-section-desc">
             Ağaç ve sebze kayıtlarını JSON formatında bilgisayarına
             indirebilirsin.
@@ -4701,6 +5516,8 @@ function Settings({ token }) {
 
           {message && <p className="settings-message">{message}</p>}
         </section>
+
+
       </div>
     </div>
   );
@@ -5130,6 +5947,51 @@ function App() {
         setPushEnabled(true);
       }
     }
+  }, []);
+
+  // Ayarları yükle ve uygula
+  useEffect(() => {
+    const applySettings = () => {
+      const settings = loadSettings();
+
+      // Tema ayarı
+      if (settings.appearance?.theme) {
+        const theme = settings.appearance.theme;
+        document.body.classList.remove('theme-light', 'theme-dark', 'theme-auto');
+
+        if (theme === 'auto') {
+          // Sistem tercihini kontrol et
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.body.classList.add(prefersDark ? 'theme-dark' : 'theme-light');
+        } else {
+          document.body.classList.add(`theme-${theme}`);
+        }
+      }
+
+      // Renk şeması
+      if (settings.appearance?.colorScheme) {
+        document.body.classList.remove('color-green', 'color-blue', 'color-brown', 'color-purple');
+        document.body.classList.add(`color-${settings.appearance.colorScheme}`);
+      }
+
+      // Yazı boyutu
+      if (settings.appearance?.fontSize) {
+        document.body.classList.remove('font-small', 'font-medium', 'font-large');
+        document.body.classList.add(`font-${settings.appearance.fontSize}`);
+      }
+    };
+
+    applySettings();
+
+    // Settings değiştiğinde tekrar uygula
+    const handleSettingsChange = () => applySettings();
+    window.addEventListener('storage', handleSettingsChange);
+    window.addEventListener('sg-settings-changed', handleSettingsChange);
+
+    return () => {
+      window.removeEventListener('storage', handleSettingsChange);
+      window.removeEventListener('sg-settings-changed', handleSettingsChange);
+    };
   }, []);
 
   // Tab değiştiğinde localStorage'a kaydet

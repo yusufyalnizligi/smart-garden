@@ -239,7 +239,11 @@ const adminSchema = new mongoose.Schema({
       defaultWateringFrequency: { type: Number, default: 7 }, // gün
       defaultFertilizingPeriod: { type: Number, default: 30 }, // gün
       autoTaskCreation: { type: Boolean, default: true },
-      harvestReminders: { type: Boolean, default: true }
+      harvestReminders: { type: Boolean, default: true },
+      wateringSeasonStart: { type: Number, default: 3 }, // Mart
+      wateringSeasonEnd: { type: Number, default: 10 }, // Ekim
+      fertilizingSeasonStart: { type: Number, default: 3 }, // Mart
+      fertilizingSeasonEnd: { type: Number, default: 9 } // Eylül
     },
 
     // Tarih & Saat Formatları
@@ -269,10 +273,18 @@ const pushSubscriptionSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const dailyReminderLogSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
+  date: { type: String, required: true }, // YYYY-MM-DD formatında
+  sentAt: { type: Date, default: Date.now }
+});
+dailyReminderLogSchema.index({ user: 1, date: 1 }, { unique: true });
+
 const Tree = mongoose.model('Tree', treeSchema);
 const Vegetable = mongoose.model('Vegetable', vegetableSchema);
 const Admin = mongoose.model('Admin', adminSchema);
 const PushSubscription = mongoose.model('PushSubscription', pushSubscriptionSchema);
+const DailyReminderLog = mongoose.model('DailyReminderLog', dailyReminderLogSchema);
 
 /* -------------------- Auth Middleware -------------------- */
 function authMiddleware(req, res, next) {
@@ -340,7 +352,11 @@ app.get('/api/settings', authMiddleware, async (req, res) => {
           defaultWateringFrequency: 7,
           defaultFertilizingPeriod: 30,
           autoTaskCreation: true,
-          harvestReminders: true
+          harvestReminders: true,
+          wateringSeasonStart: 3,
+          wateringSeasonEnd: 10,
+          fertilizingSeasonStart: 3,
+          fertilizingSeasonEnd: 9
         },
         ui: {
           dateFormat: 'dd.MM.yyyy',
@@ -1101,14 +1117,45 @@ app.post('/api/trees', authMiddleware, async (req, res) => {
   const { name, count, notes, imageUrl, maintenance, category } = req.body;
 
   try {
+    // Kullanıcının ayarlarını al
+    const admin = await Admin.findById(req.user.id);
+    const settings = admin?.settings;
+
+    // Maintenance array'i hazırla
+    let maintenanceArray = Array.isArray(maintenance) ? maintenance : [];
+
+    // Otomatik görev oluşturma aktifse ve maintenance boşsa
+    if (settings?.maintenance?.autoTaskCreation && maintenanceArray.length === 0) {
+      const defaultWateringFreq = settings.maintenance.defaultWateringFrequency || 7;
+      const defaultFertilizingPeriod = settings.maintenance.defaultFertilizingPeriod || 30;
+      const wateringSeasonStart = settings.maintenance.wateringSeasonStart || 3;
+      const wateringSeasonEnd = settings.maintenance.wateringSeasonEnd || 10;
+
+      // Sulama sezonu için görevler oluştur
+      for (let month = wateringSeasonStart; month <= wateringSeasonEnd; month++) {
+        maintenanceArray.push({
+          month: month,
+          tasks: `${defaultWateringFreq} günde bir sulama`,
+          completed: false
+        });
+      }
+
+      // Gübreleme görevi (yıllık)
+      maintenanceArray.push({
+        month: 4, // Nisan
+        tasks: `${defaultFertilizingPeriod} günde bir gübreleme`,
+        completed: false
+      });
+
+      console.log(`✓ ${name} için otomatik bakım görevleri oluşturuldu`);
+    }
+
     const tree = new Tree({
       name,
       count,
       notes,
       imageUrl: imageUrl || undefined,
-      maintenance: Array.isArray(maintenance) ? maintenance : [],
-
-      // 🆕
+      maintenance: maintenanceArray,
       category: category || 'genel'
     });
 
@@ -1303,14 +1350,57 @@ app.post('/api/vegetables', authMiddleware, async (req, res) => {
   const { name, count, notes, imageUrl, maintenance, category } = req.body;
 
   try {
+    // Kullanıcının ayarlarını al
+    const admin = await Admin.findById(req.user.id);
+    const settings = admin?.settings;
+
+    // Maintenance array'i hazırla
+    let maintenanceArray = Array.isArray(maintenance) ? maintenance : [];
+
+    // Otomatik görev oluşturma aktifse ve maintenance boşsa
+    if (settings?.maintenance?.autoTaskCreation && maintenanceArray.length === 0) {
+      const defaultWateringFreq = settings.maintenance.defaultWateringFrequency || 7;
+      const defaultFertilizingPeriod = settings.maintenance.defaultFertilizingPeriod || 30;
+      const wateringSeasonStart = settings.maintenance.wateringSeasonStart || 3;
+      const wateringSeasonEnd = settings.maintenance.wateringSeasonEnd || 10;
+
+      // Sulama sezonu için görevler oluştur
+      for (let month = wateringSeasonStart; month <= wateringSeasonEnd; month++) {
+        maintenanceArray.push({
+          month: month,
+          tasks: `${defaultWateringFreq} günde bir sulama`,
+          completed: false
+        });
+      }
+
+      // Gübreleme görevi (yıllık)
+      maintenanceArray.push({
+        month: 5, // Mayıs
+        tasks: `${defaultFertilizingPeriod} günde bir gübreleme`,
+        completed: false
+      });
+
+      // Hasat hatırlatması aktifse ve sebze isminde hasat görevleri için ipucu varsa
+      if (settings?.maintenance?.harvestReminders) {
+        const harvestMonths = [6, 7, 8, 9]; // Haziran-Eylül arası hasat sezonu
+        harvestMonths.forEach(month => {
+          maintenanceArray.push({
+            month: month,
+            tasks: 'Hasat kontrolü (olgunlaşma durumu)',
+            completed: false
+          });
+        });
+      }
+
+      console.log(`✓ ${name} için otomatik bakım görevleri oluşturuldu`);
+    }
+
     const veg = new Vegetable({
       name,
       count,
       notes,
       imageUrl: imageUrl || undefined,
-      maintenance: Array.isArray(maintenance) ? maintenance : [],
-
-      // 🆕
+      maintenance: maintenanceArray,
       category: category || 'genel'
     });
 
@@ -2090,6 +2180,198 @@ app.get('/api/reports/history-summary', authMiddleware, async (req, res) => {
   }
 });
 
+// Test endpoint - Günlük hatırlatmayı manuel olarak tetikle
+app.post('/api/test/daily-reminder', authMiddleware, async (req, res) => {
+  try {
+    console.log('\n🧪 Manuel test: Günlük hatırlatma tetiklendi');
+
+    // Bugünkü log'u temizle (test için)
+    const todayDate = new Date().toISOString().split('T')[0];
+    const admin = await Admin.findById(req.user.id);
+    await DailyReminderLog.deleteOne({
+      user: admin._id,
+      date: todayDate
+    });
+    console.log('  🗑️  Bugünkü hatırlatma logu temizlendi (test için)');
+
+    await sendDailyReminders();
+    res.json({ message: 'Günlük hatırlatma testi tamamlandı. Konsol loglarını kontrol edin.' });
+  } catch (err) {
+    console.error('Test hatası:', err);
+    res.status(500).json({ message: 'Test başarısız.', error: err.message });
+  }
+});
+
+// Test endpoint - Bugünkü hatırlatma logunu temizle
+app.delete('/api/test/daily-reminder-log', authMiddleware, async (req, res) => {
+  try {
+    const todayDate = new Date().toISOString().split('T')[0];
+    const admin = await Admin.findById(req.user.id);
+
+    const result = await DailyReminderLog.deleteOne({
+      user: admin._id,
+      date: todayDate
+    });
+
+    if (result.deletedCount > 0) {
+      console.log(`🗑️  ${admin.username} için bugünkü hatırlatma logu temizlendi`);
+      res.json({
+        message: 'Bugünkü hatırlatma logu temizlendi. Artık tekrar bildirim alabilirsiniz.',
+        cleared: true
+      });
+    } else {
+      res.json({
+        message: 'Bugün için hatırlatma logu bulunamadı.',
+        cleared: false
+      });
+    }
+  } catch (err) {
+    console.error('Log temizleme hatası:', err);
+    res.status(500).json({ message: 'Log temizlenemedi.', error: err.message });
+  }
+});
+
+// Test endpoint - Otomatik görev oluşturma testi
+app.post('/api/test/auto-task', authMiddleware, async (req, res) => {
+  try {
+    console.log('\n🧪 Otomatik görev oluşturma testi başlatılıyor...');
+
+    const admin = await Admin.findById(req.user.id);
+    const settings = admin?.settings;
+
+    if (!settings?.maintenance?.autoTaskCreation) {
+      return res.json({
+        message: 'Otomatik görev oluşturma kapalı. Ayarlar > Bakım Planlama bölümünden açabilirsiniz.',
+        autoTaskCreation: false
+      });
+    }
+
+    // Test bitkisi ekle
+    const testTree = new Tree({
+      name: 'Test Ağacı (Otomatik görev testi)',
+      count: 1,
+      notes: 'Otomatik görev oluşturma test bitkisi',
+      maintenance: [], // Boş maintenance ile ekleniyor
+      category: 'test'
+    });
+
+    // Otomatik görev oluşturma mantığı
+    const defaultWateringFreq = settings.maintenance.defaultWateringFrequency || 7;
+    const defaultFertilizingPeriod = settings.maintenance.defaultFertilizingPeriod || 30;
+    const wateringSeasonStart = settings.maintenance.wateringSeasonStart || 3;
+    const wateringSeasonEnd = settings.maintenance.wateringSeasonEnd || 10;
+
+    const maintenanceArray = [];
+
+    // Sulama görevleri
+    for (let month = wateringSeasonStart; month <= wateringSeasonEnd; month++) {
+      maintenanceArray.push({
+        month: month,
+        tasks: `${defaultWateringFreq} günde bir sulama`,
+        completed: false
+      });
+    }
+
+    // Gübreleme görevi
+    maintenanceArray.push({
+      month: 4,
+      tasks: `${defaultFertilizingPeriod} günde bir gübreleme`,
+      completed: false
+    });
+
+    testTree.maintenance = maintenanceArray;
+    await testTree.save();
+
+    console.log(`✓ Test bitkisi eklendi: ${maintenanceArray.length} otomatik görev oluşturuldu`);
+
+    res.json({
+      message: 'Otomatik görev oluşturma testi başarılı!',
+      autoTaskCreation: true,
+      testPlant: testTree,
+      createdTasks: maintenanceArray.length,
+      settings: {
+        wateringFrequency: defaultWateringFreq,
+        fertilizingPeriod: defaultFertilizingPeriod,
+        wateringSeason: `${wateringSeasonStart}-${wateringSeasonEnd}`,
+      }
+    });
+  } catch (err) {
+    console.error('Test hatası:', err);
+    res.status(500).json({ message: 'Test başarısız.', error: err.message });
+  }
+});
+
+// Test endpoint - Hasat hatırlatmaları testi
+app.post('/api/test/harvest-reminder', authMiddleware, async (req, res) => {
+  try {
+    console.log('\n🧪 Hasat hatırlatmaları testi başlatılıyor...');
+
+    const admin = await Admin.findById(req.user.id);
+    const settings = admin?.settings;
+
+    if (!settings?.maintenance?.harvestReminders) {
+      return res.json({
+        message: 'Hasat hatırlatmaları kapalı. Ayarlar > Bakım Planlama bölümünden açabilirsiniz.',
+        harvestReminders: false
+      });
+    }
+
+    // Test sebze ekle
+    const testVeg = new Vegetable({
+      name: 'Test Domates (Hasat testi)',
+      count: 5,
+      notes: 'Hasat hatırlatması test sebzesi',
+      maintenance: [],
+      category: 'test'
+    });
+
+    const maintenanceArray = [];
+    const defaultWateringFreq = settings.maintenance.defaultWateringFrequency || 7;
+    const wateringSeasonStart = settings.maintenance.wateringSeasonStart || 3;
+    const wateringSeasonEnd = settings.maintenance.wateringSeasonEnd || 10;
+
+    // Sulama görevleri
+    for (let month = wateringSeasonStart; month <= wateringSeasonEnd; month++) {
+      maintenanceArray.push({
+        month: month,
+        tasks: `${defaultWateringFreq} günde bir sulama`,
+        completed: false
+      });
+    }
+
+    // Hasat görevleri ekle
+    const harvestMonths = [6, 7, 8, 9]; // Haziran-Eylül
+    harvestMonths.forEach(month => {
+      maintenanceArray.push({
+        month: month,
+        tasks: 'Hasat kontrolü (olgunlaşma durumu)',
+        completed: false
+      });
+    });
+
+    testVeg.maintenance = maintenanceArray;
+    await testVeg.save();
+
+    const harvestTaskCount = maintenanceArray.filter(t =>
+      t.tasks.toLowerCase().includes('hasat')
+    ).length;
+
+    console.log(`✓ Test sebze eklendi: ${harvestTaskCount} hasat görevi oluşturuldu`);
+
+    res.json({
+      message: 'Hasat hatırlatmaları testi başarılı!',
+      harvestReminders: true,
+      testPlant: testVeg,
+      totalTasks: maintenanceArray.length,
+      harvestTasks: harvestTaskCount,
+      harvestMonths: harvestMonths
+    });
+  } catch (err) {
+    console.error('Test hatası:', err);
+    res.status(500).json({ message: 'Test başarısız.', error: err.message });
+  }
+});
+
 
 /* -------------------- DB & Server Start -------------------- */
 
@@ -2252,9 +2534,9 @@ async function sendMonthlyMaintenanceReport() {
 
         // E-posta gönder
         if (transporter) {
-          const toEmail = process.env.EMAIL_TO || 'oguzemrecakil10@gmail.com';
+          const toEmail = process.env.EMAIL_TO || 'singlewolf18@gmail.com';
           await transporter.sendMail({
-            from: process.env.EMAIL_USER || 'oguzemrecakil10@gmail.com',
+            from: process.env.EMAIL_USER || 'singlewolf18@gmail.com',
             to: toEmail,
             subject: `🌳 ${monthNames[currentMonth - 1]} Ayı Bakım Raporu - ${totalCompleted}/${totalTasks} Tamamlandı`,
             html: emailHtml
@@ -2296,8 +2578,174 @@ async function sendMonthlyMaintenanceReport() {
   }
 }
 
+// Günlük hatırlatma gönderme fonksiyonu
+async function sendDailyReminders() {
+  try {
+    console.log('\n⏰ Günlük hatırlatmalar kontrol ediliyor...');
+
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const todayDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    // Tüm kullanıcıları al
+    const users = await Admin.find({});
+
+    for (const user of users) {
+      const reminderTime = user.settings?.notifications?.reminderTime || '08:00';
+      const [reminderHour, reminderMinute] = reminderTime.split(':').map(Number);
+
+      // Kullanıcının hatırlatma saati şu anki saatle eşleşiyor mu? (±10 dakika tolerans)
+      const timeDiff = Math.abs((currentHour * 60 + currentMinute) - (reminderHour * 60 + reminderMinute));
+
+      if (timeDiff <= 10) {
+        // Bugün bu kullanıcıya hatırlatma gönderilmiş mi kontrol et
+        const existingLog = await DailyReminderLog.findOne({
+          user: user._id,
+          date: todayDate
+        });
+
+        if (existingLog) {
+          console.log(`  ⏭️  ${user.username} için bugün zaten hatırlatma gönderilmiş, atlanıyor`);
+          continue;
+        }
+
+        console.log(`  📬 ${user.username} için hatırlatma gönderiliyor (${reminderTime})`);
+
+        // Bu ay için bakım görevlerini al
+        const currentMonth = now.getMonth() + 1;
+        // Sistemde user field'ı yok, tüm ağaç ve sebzeleri al
+        const trees = await Tree.find({});
+        const vegetables = await Vegetable.find({});
+
+        let taskCount = 0;
+
+        // Ağaçlar için bu ayki görevleri say
+        for (const tree of trees) {
+          const monthTasks = tree.maintenance?.filter(m => m.month === currentMonth && !m.completed);
+          taskCount += monthTasks?.length || 0;
+        }
+
+        // Sebzeler için bu ayki görevleri say
+        let harvestTaskCount = 0;
+        for (const veg of vegetables) {
+          const monthTasks = veg.maintenance?.filter(m => m.month === currentMonth && !m.completed);
+          taskCount += monthTasks?.length || 0;
+
+          // Hasat görevlerini ayrıca say (harvestReminders ayarı için)
+          if (user.settings?.maintenance?.harvestReminders) {
+            const harvestTasks = monthTasks?.filter(t =>
+              t.tasks && (t.tasks.toLowerCase().includes('hasat') || t.tasks.toLowerCase().includes('topla'))
+            );
+            harvestTaskCount += harvestTasks?.length || 0;
+          }
+        }
+
+        if (taskCount > 0) {
+          let notificationSent = false;
+
+          // Push bildirimi gönder
+          if (user.settings?.notifications?.pushEnabled) {
+            try {
+              const subs = await PushSubscription.find({ user: user._id });
+              // Bildirim mesajını hazırla
+              let notificationBody = `${taskCount} adet tamamlanmamış bakım göreviniz var!`;
+              if (harvestTaskCount > 0) {
+                notificationBody += ` (${harvestTaskCount} hasat görevi)`;
+              }
+
+              const payload = JSON.stringify({
+                title: '🌱 Günlük Bakım Hatırlatması',
+                body: notificationBody,
+                icon: '/icon-192x192.png',
+                badge: '/badge-72x72.png',
+                tag: 'daily-reminder',
+                requireInteraction: false,
+                data: { url: '/' }
+              });
+
+              for (const sub of subs) {
+                try {
+                  await webpush.sendNotification(sub.subscription, payload);
+                  console.log(`    ✓ Push bildirimi gönderildi (${sub.browser})`);
+                  notificationSent = true;
+                } catch (err) {
+                  if (err.statusCode === 410 || err.statusCode === 404) {
+                    await PushSubscription.deleteOne({ _id: sub._id });
+                  }
+                }
+              }
+            } catch (err) {
+              console.error(`    ✗ Push bildirimi hatası:`, err.message);
+            }
+          }
+
+          // Email gönder
+          if (user.settings?.notifications?.emailEnabled && user.email) {
+            try {
+              // Email içeriğini hazırla
+              let emailContent = `<p>Bugün için <strong>${taskCount}</strong> adet tamamlanmamış bakım göreviniz var.</p>`;
+              if (harvestTaskCount > 0) {
+                emailContent += `<p><strong>${harvestTaskCount}</strong> adet hasat görevi bulunmaktadır. 🍅🥕🌽</p>`;
+              }
+
+              const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: user.email,
+                subject: '🌱 Günlük Bakım Hatırlatması',
+                html: `
+                  <h2>Merhaba ${user.username},</h2>
+                  ${emailContent}
+                  <p>Uygulamaya giriş yaparak görevlerinizi kontrol edebilirsiniz.</p>
+                  <br>
+                  <p>İyi çalışmalar!</p>
+                  <p><em>Akıllı Bahçe Yönetim Sistemi</em></p>
+                `
+              };
+              await transporter.sendMail(mailOptions);
+              console.log(`    ✓ Email gönderildi (${user.email})`);
+              notificationSent = true;
+            } catch (err) {
+              console.error(`    ✗ Email hatası:`, err.message);
+            }
+          }
+
+          // Bildirim gönderildiyse log'a kaydet
+          if (notificationSent) {
+            try {
+              await DailyReminderLog.create({
+                user: user._id,
+                date: todayDate
+              });
+              console.log(`    ✓ Hatırlatma kaydı oluşturuldu`);
+            } catch (err) {
+              // Duplicate key hatası (zaten var) - sorun değil
+              if (err.code !== 11000) {
+                console.error(`    ✗ Log kaydetme hatası:`, err.message);
+              }
+            }
+          }
+        } else {
+          console.log(`    ℹ️  Tamamlanmamış görev yok, bildirim gönderilmedi`);
+        }
+      }
+    }
+
+    console.log('✓ Günlük hatırlatma kontrolü tamamlandı\n');
+  } catch (err) {
+    console.error('❌ Günlük hatırlatma hatası:', err);
+  }
+}
+
 // Cron job'ları ayarla
 function setupCronJobs() {
+  // Her 10 dakikada bir günlük hatırlatmaları kontrol et
+  cron.schedule('*/10 * * * *', () => {
+    sendDailyReminders();
+  }, {
+    timezone: 'Europe/Istanbul'
+  });
+
   // Her ayın 1'inde saat 08:00'de çalış
   cron.schedule('0 8 1 * *', () => {
     console.log('\n⏰ Cron tetiklendi: Ayın 1. günü - Bakım raporu gönderiliyor...');
@@ -2315,6 +2763,7 @@ function setupCronJobs() {
   });
 
   console.log('⏰ Cron job\'lar başlatıldı:');
+  console.log('   🔔 Her 10 dakikada - Günlük hatırlatma kontrolü');
   console.log('   📅 Her ayın 1. günü saat 08:00 - Bakım raporu');
   console.log('   📅 Her ayın 15. günü saat 08:00 - Bakım raporu');
 }

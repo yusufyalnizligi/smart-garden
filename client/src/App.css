@@ -401,7 +401,7 @@ textarea {
   background: #ffffff;
   border-radius: 16px;
   padding: 16px 18px;
-  max-width: 560px;
+  max-width: 750px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
@@ -759,8 +759,262 @@ textarea {
 }
 
 .home-date-line {
-  margin: 0 0 4px;
+  margin: 0 0 12px;
   font-size: 0.9rem;
+}
+
+/* Bugünün özeti grid */
+.today-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.summary-item {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-label {
+  font-size: 0.7rem;
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summary-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.summary-tip {
+  font-size: 0.75rem;
+  color: #10b981;
+  font-weight: 500;
+}
+
+/* Sezon başlangıç uyarı kutusu */
+.season-alert-box {
+  margin-top: 12px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border: 2px solid #3b82f6;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.season-alert-header {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 8px;
+}
+
+.season-alert-item {
+  background: rgba(255, 255, 255, 0.7);
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #1e3a8a;
+  margin-bottom: 6px;
+}
+
+.season-alert-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Dark mode için sezon uyarıları */
+body.theme-dark .season-alert-box {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  border-color: #3b82f6;
+}
+
+body.theme-dark .season-alert-header {
+  color: #93c5fd;
+}
+
+body.theme-dark .season-alert-item {
+  background: rgba(0, 0, 0, 0.3);
+  color: #bfdbfe;
+}
+
+/* Acil görevler kutusu - Temel stil */
+.urgent-tasks-box {
+  margin-top: 12px;
+  border-radius: 10px;
+  padding: 10px;
+  transition: all 0.3s ease;
+}
+
+/* Acil görevler var - Sarı/Turuncu */
+.urgent-tasks-box.urgent {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #f59e0b;
+}
+
+.urgent-tasks-box.urgent .urgent-header {
+  color: #92400e;
+}
+
+.urgent-tasks-box.urgent .urgent-type {
+  background: #f59e0b;
+}
+
+.urgent-tasks-box.urgent .urgent-name {
+  color: #78350f;
+}
+
+.urgent-tasks-box.urgent .urgent-task-detail {
+  color: #92400e;
+}
+
+.urgent-tasks-box.urgent .urgent-more {
+  color: #92400e;
+}
+
+/* Görev yok - Yeşil/Normal */
+.urgent-tasks-box.normal {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border: 2px solid #10b981;
+}
+
+.urgent-tasks-box.normal .urgent-header {
+  color: #065f46;
+}
+
+.urgent-success-message {
+  text-align: center;
+  color: #065f46;
+  font-size: 0.85rem;
+  padding: 8px;
+  font-weight: 500;
+}
+
+.urgent-header {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.urgent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.urgent-item {
+  background: rgba(255, 255, 255, 0.7);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.urgent-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.urgent-type {
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.urgent-name {
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.urgent-task-detail {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  padding-left: 8px;
+  border-left: 2px solid rgba(0, 0, 0, 0.1);
+  margin-top: 4px;
+}
+
+.urgent-more {
+  text-align: center;
+  font-size: 0.75rem;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* Dark mode için bugünün özeti */
+body.theme-dark .summary-item {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+body.theme-dark .summary-label {
+  color: #9ca3af;
+}
+
+body.theme-dark .summary-value {
+  color: #e5e7eb;
+}
+
+body.theme-dark .summary-tip {
+  color: #6ee7b7;
+}
+
+/* Dark mode - Acil görevler var */
+body.theme-dark .urgent-tasks-box.urgent {
+  background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
+  border-color: #f59e0b;
+}
+
+body.theme-dark .urgent-tasks-box.urgent .urgent-header {
+  color: #fde68a;
+}
+
+body.theme-dark .urgent-tasks-box.urgent .urgent-name {
+  color: #fde68a;
+}
+
+body.theme-dark .urgent-tasks-box.urgent .urgent-task-detail {
+  color: #fcd34d;
+  border-left-color: rgba(253, 230, 138, 0.3);
+}
+
+body.theme-dark .urgent-tasks-box.urgent .urgent-more {
+  color: #fcd34d;
+}
+
+/* Dark mode - Görev yok */
+body.theme-dark .urgent-tasks-box.normal {
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  border-color: #10b981;
+}
+
+body.theme-dark .urgent-tasks-box.normal .urgent-header {
+  color: #6ee7b7;
+}
+
+body.theme-dark .urgent-success-message {
+  color: #6ee7b7;
+}
+
+body.theme-dark .urgent-item {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Mobil için özet grid */
+@media (max-width: 600px) {
+  .today-summary-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .home-stats-list {
@@ -768,6 +1022,96 @@ textarea {
   margin: 4px 0 0;
   padding: 0;
   font-size: 0.9rem;
+}
+
+/* Bahçe adı gösterimi */
+.garden-name-display {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #10b981;
+  margin: 12px 0 16px 0;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-radius: 10px;
+  border-left: 4px solid #10b981;
+}
+
+/* Bahçe istatistik grid */
+.garden-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.garden-stat-box {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.garden-stat-box:hover {
+  background: #f3f4f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.garden-stat-icon {
+  font-size: 1.4rem;
+  margin-bottom: 4px;
+}
+
+.garden-stat-label {
+  font-size: 0.65rem;
+  color: #6b7280;
+  margin-bottom: 2px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.garden-stat-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* Dark mode için bahçe istatistikleri */
+body.theme-dark .garden-name-display {
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  color: #6ee7b7;
+  border-left-color: #6ee7b7;
+}
+
+body.theme-dark .garden-stat-box {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+body.theme-dark .garden-stat-box:hover {
+  background: #4b5563;
+}
+
+body.theme-dark .garden-stat-label {
+  color: #9ca3af;
+}
+
+body.theme-dark .garden-stat-value {
+  color: #e5e7eb;
+}
+
+/* Mobil için grid düzeni */
+@media (max-width: 600px) {
+  .garden-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .garden-name-display {
+    font-size: 1rem;
+  }
 }
 
 .home-grid {
@@ -1404,13 +1748,7 @@ main {
   gap: 12px;
 }
 
-@media (max-width: 900px) {
-  .settings-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 700px) {
+@media (max-width: 1024px) {
   .settings-grid {
     grid-template-columns: 1fr;
   }
@@ -1424,6 +1762,34 @@ main {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.settings-section-wide {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+}
+.settings-section-widel {
+  grid-column: span 3;
+  display: flex;
+  flex-direction: column;
+}
+.settings-section-tall {
+  grid-row: span 2;
+}
+
+@media (max-width: 1024px) {
+  .settings-section-tall {
+    grid-row: span 1;
+  }
+
+  .settings-section-wide {
+    grid-column: span 1;
+  }
+
+  .settings-section-widel {
+    grid-column: span 1;
+  }
 }
 
 .settings-section h3 {
@@ -1458,7 +1824,7 @@ main {
 }
 
 .settings-select {
-  min-width: 160px;
+  width: 160px;
   border-radius: 999px;
   border: 1px solid #e5e7eb;
   padding: 6px 10px;
@@ -1470,6 +1836,41 @@ main {
   margin-top: 8px;
   font-size: 0.85rem;
   color: #2563eb;
+}
+
+.test-results-box {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f0fdf4;
+  border: 2px solid #86efac;
+  border-radius: 12px;
+}
+
+.test-results-box h4 {
+  margin: 0 0 12px 0;
+  color: #166534;
+  font-size: 1rem;
+}
+
+.test-results-box ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.test-results-box li {
+  margin: 4px 0;
+  font-size: 0.9rem;
+  color: #15803d;
+}
+
+.test-note {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #fef3c7;
+  border-left: 3px solid #f59e0b;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #92400e;
 }
 
 /* Toggle switch */
@@ -2337,5 +2738,371 @@ main {
   .maintenance-tag {
     font-size: 0.7rem;
     padding: 3px 6px;
+  }
+}
+
+/* =========== TEMA AYARLARI =========== */
+
+/* Dark Mode */
+body.theme-dark {
+  background: #1a1a1a;
+  color: #e5e7eb;
+}
+
+body.theme-dark .card,
+body.theme-dark .app-header,
+body.theme-dark .modal-overlay .modal {
+  background: #2d2d2d;
+  color: #e5e7eb;
+}
+
+body.theme-dark .btn {
+  background: #3f3f3f;
+  color: #e5e7eb;
+}
+
+body.theme-dark .btn:hover {
+  background: #4f4f4f;
+}
+
+body.theme-dark input,
+body.theme-dark textarea,
+body.theme-dark select {
+  background: #3f3f3f;
+  color: #e5e7eb;
+  border-color: #4f4f4f;
+}
+
+body.theme-dark .muted {
+  color: #9ca3af;
+}
+
+/* Renk Temaları */
+body.color-blue .btn.primary {
+  background: #3b82f6;
+}
+
+body.color-blue .btn.primary:hover {
+  background: #2563eb;
+}
+
+body.color-brown .btn.primary {
+  background: #92400e;
+}
+
+body.color-brown .btn.primary:hover {
+  background: #78350f;
+}
+
+body.color-purple .btn.primary {
+  background: #9333ea;
+}
+
+body.color-purple .btn.primary:hover {
+  background: #7e22ce;
+}
+
+/* Yazı Boyutları */
+body.font-small {
+  font-size: 14px;
+}
+
+body.font-medium {
+  font-size: 16px;
+}
+
+body.font-large {
+  font-size: 18px;
+}
+
+/* Liste Görünümü */
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.item-row:hover {
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+  transform: translateY(-2px);
+}
+
+.item-row .tree-card-image-wrapper {
+  width: 80px;
+  height: 80px;
+  min-width: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.item-row .tree-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-row .tree-card-content {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.item-row .tree-card-info {
+  flex: 1;
+}
+
+.item-row h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+}
+
+.item-row .tree-card-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.item-row .progress-bar-container {
+  width: 200px;
+  max-width: 200px;
+}
+
+/* Dark mode için liste görünümü */
+body.theme-dark .item-row {
+  background: #2d2d2d;
+}
+
+body.theme-dark .item-row:hover {
+  background: #3d3d3d;
+}
+
+/* Mobil için liste görünümü */
+@media (max-width: 768px) {
+  .item-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .item-row .tree-card-content {
+    flex-direction: column;
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .item-row .progress-bar-container {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Liste Görünümü - Bakım Planı Önizleme */
+.list-maintenance-summary {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Bakım planı sidebar olarak sağ tarafa */
+.list-maintenance-sidebar {
+  width: 500px;
+  min-width: 320px;
+  max-width: 500px;
+  margin-top: 0;
+  padding-top: 0;
+  padding-left: 20px;
+  margin-left: 16px;
+  border-top: none;
+  border-left: 2px solid #e5e7eb;
+}
+
+/* Tree card body liste modunda flex: 1 */
+.tree-card-body-list {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Item row sidebar içerdiğinde düzeni ayarla */
+.item-row:has(.list-maintenance-sidebar) {
+  align-items: stretch;
+}
+
+.maintenance-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  background: #f9fafb;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.maintenance-preview:hover {
+  background: #e5e7eb;
+  transform: translateX(2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.month-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 50px;
+  padding: 4px 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.task-preview {
+  flex: 1;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+.completed-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #10b981;
+  color: white;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.maintenance-chip {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+  font-weight: 500;
+}
+
+.more-tasks {
+  text-align: center;
+  padding: 8px;
+  color: #6b7280;
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+/* Dark mode için bakım planı */
+body.theme-dark .list-maintenance-summary {
+  border-top-color: #4b5563;
+}
+
+body.theme-dark .list-maintenance-sidebar {
+  border-left-color: #4b5563;
+}
+
+body.theme-dark .maintenance-preview {
+  background: #374151;
+}
+
+body.theme-dark .maintenance-preview:hover {
+  background: #4b5563;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+body.theme-dark .task-preview {
+  color: #d1d5db;
+}
+
+body.theme-dark .more-tasks {
+  background: #374151;
+  color: #9ca3af;
+}
+
+/* Mobil için bakım planı */
+@media (max-width: 768px) {
+  .maintenance-preview {
+    flex-wrap: wrap;
+  }
+
+  .month-badge {
+    min-width: auto;
+  }
+
+  /* Mobilde sidebar alt tarafa taşı */
+  .list-maintenance-sidebar {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    margin-top: 12px;
+    padding-left: 0;
+    padding-top: 12px;
+    border-left: none;
+    border-top: 1px solid #f3f4f6;
+  }
+
+  body.theme-dark .list-maintenance-sidebar {
+    border-top-color: #4b5563;
+  }
+
+  .task-preview {
+    width: 100%;
+  }
+}
+
+/* Header sağ taraf rozetleri */
+.header-right-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.maintenance-chip-inline {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  font-size: 0.8rem !important;
+  padding: 5px 10px !important;
+  border-radius: 8px !important;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+/* Dark mode için inline maintenance chip */
+body.theme-dark .maintenance-chip-inline {
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+/* Mobil için header badges */
+@media (max-width: 768px) {
+  .header-right-badges {
+    gap: 6px;
+  }
+
+  .maintenance-chip-inline {
+    font-size: 0.75rem !important;
+    padding: 4px 8px !important;
   }
 }

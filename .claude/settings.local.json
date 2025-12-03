@@ -20,7 +20,13 @@
       "Bash(npm install:*)",
       "Bash(findstr:*)",
       "Bash(cmd //c taskkill //PID 27196 //F)",
-      "Bash(cmd //c taskkill //PID 18424 //F)"
+      "Bash(cmd //c taskkill //PID 18424 //F)",
+      "Bash(git commit:*)",
+      "Bash(cmd //c taskkill //PID 37492 //F)",
+      "Bash(cmd //c taskkill //PID 20188 //F)",
+      "Bash(powershell -Command \"Get-Content ''client\\src\\App.css'' | Measure-Object -Line | Select-Object -ExpandProperty Lines\")",
+      "Bash(powershell:*)",
+      "Bash(cmd //c taskkill //PID 29292 //F)"
     ],
     "deny": [],
     "ask": []
