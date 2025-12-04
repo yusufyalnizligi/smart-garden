@@ -1188,50 +1188,70 @@ const timeStr = now.toLocaleTimeString('tr-TR', {
 
 /* -------------------- SEBZE FORMU (POPUP İÇİN) -------------------- */
 
-// Yaygın sebze isimleri listesi
+// Yaygın sebze isimleri listesi (alfabetik sıralı)
 const COMMON_VEGETABLE_NAMES = [
-  'Domates',
-  'Biber',
-  'Patlıcan',
-  'Salatalık',
-  'Kabak',
-  'Fasulye',
-  'Bezelye',
-  'Nohut',
-  'Mercimek',
+  'Acı Biber',
+  'Alabaş',
+  'Arpacık Soğan',
+  'Bakla',
+  'Bal Kabağı',
   'Bamya',
+  'Barbunya',
+  'Bezelye',
+  'Beyaz Lahana',
+  'Biber',
+  'Brokoli',
+  'Börülce',
+  'Brüksel Lahanası',
+  'Çarliston Biber',
+  'Çin Lahanası',
+  'Dereotu',
+  'Domates',
+  'Enginar',
+  'Fasulye',
+  'Frenk Soğanı',
+  'Göbek Marul',
+  'Havuç',
+  'Ispanak',
+  'Kabak',
+  'Kapya Biber',
+  'Kara Lahana',
+  'Karnabahar',
+  'Karpuz',
+  'Kavun',
+  'Kereviz',
+  'Kırmızı Lahana',
+  'Kıvırcık Marul',
+  'Kuru Soğan',
+  'Kuşkonmaz',
+  'Kuzukulağı',
   'Marul',
   'Maydanoz',
-  'Dereotu',
-  'Roka',
-  'Tere',
+  'Mercimek',
   'Nane',
-  'Fesleğen',
-  'Kekik',
-  'Soğan',
-  'Sarımsak',
-  'Pırasa',
-  'Havuç',
-  'Turp',
+  'Nohut',
   'Pancar',
   'Patates',
-  'Lahana',
-  'Karnabahar',
-  'Brokoli',
-  'Ispanak',
-  'Semizotu',
+  'Patlıcan',
   'Pazı',
-  'Kereviz',
-  'Kabak Çiçeği',
-  'Mısır',
-  'Çilek',
-  'Kavun',
-  'Karpuz',
-  'Enginar',
-  'Bamya',
-  'Taze Soğan',
-  'Kırmızı Lahana'
-];
+  'Pırasa',
+  'Ravent',
+  'Rezene',
+  'Roka',
+  'Salatalık',
+  'Salsifi',
+  'Sarımsak',
+  'Semizotu',
+  'Sivri Biber',
+  'Soğan',
+  'Spagetti Kabağı',
+  'Şalgam',
+  'Tatlı Patates',
+  'Tere',
+  'Turp',
+  'Yer Elması',
+  'Yeşil Soğan'
+].sort();
 
 function VegetableForm({ initialVeg, onSave, onCancel, token }) {
   const [nameSelection, setNameSelection] = useState(''); // Dropdown seçimi
@@ -1456,11 +1476,14 @@ function VegetableForm({ initialVeg, onSave, onCancel, token }) {
           onChange={(e) => setCategory(e.target.value)}
         >
           <option value="genel">Genel</option>
-          <option value="yaprakli">Yapraklı (Marul, Ispanak...)</option>
-          <option value="kök">Kök Sebze (Havuç, Pancar...)</option>
-          <option value="meyve">Meyve Sebze (Domates, Biber...)</option>
-          <option value="baklagil">Baklagil</option>
-          <option value="diger">Diğer</option>
+          <option value="yaprakli">Yapraklı (Marul, Lahana, Ispanak, Pazı...)</option>
+          <option value="kok">Kök Sebzeler (Havuç, Pancar, Turp, Patates...)</option>
+          <option value="meyveli">Meyveli Sebzeler (Domates, Biber, Patlıcan, Bamya...)</option>
+          <option value="kabakgil">Kabakgiller (Kabak, Salatalık, Kavun, Karpuz...)</option>
+          <option value="baklagil">Baklagiller (Fasulye, Bezelye, Nohut, Mercimek...)</option>
+          <option value="sogansi">Soğansı Bitkiler (Soğan, Sarımsak, Pırasa...)</option>
+          <option value="aromatik">Aromatik Otlar (Maydanoz, Dereotu, Nane, Rezene...)</option>
+          <option value="ozel">Özel Sebzeler (Kuşkonmaz, Ravent...)</option>
         </select>
       </label>
       <label>
@@ -1554,47 +1577,20 @@ function VegetableForm({ initialVeg, onSave, onCancel, token }) {
 
 // Yaygın ağaç ve sebze isimleri listesi
 const COMMON_TREE_NAMES = [
-  'Elma',
-  'Armut',
-  'Kiraz',
-  'Vişne',
-  'Erik',
-  'Kayısı',
-  'Şeftali',
-  'Nektarin',
-  'Ayva',
-  'Nar',
-  'İncir',
-  'Dut',
-  'Ceviz',
-  'Badem',
-  'Fındık',
-  'Antep Fıstığı',
-  'Zeytin',
-  'Üzüm',
-  'Limon',
-  'Portakal',
-  'Mandalina',
-  'Greyfurt',
-  'Kivi',
-  'Kestane',
-  'Hurma',
-  'Avokado',
-  'Çam',
-  'Servi',
-  'Ardıç',
-  'Sedir',
-  'Ladin',
-  'Gül',
-  'Akasya',
-  'Ihlamur',
-  'Çınar',
-  'Meşe',
-  'Kavak',
-  'Söğüt',
-  'Mazı',
-  'Kızılağaç'
-];
+  'Ahududu', 'Akçaağaç', 'Alıç', 'Altıntop', 'Antep Fıstığı',
+  'Armut', 'Avokado', 'Ayva', 'Badem', 'Bektaşi Üzümü',
+  'Bergamot', 'Beyaz Dut', 'Böğürtlen', 'Ceviz', 'Çam',
+  'Elma', 'Erik', 'Fındık', 'Gavur Narı', 'Greyfurt',
+  'Guava', 'Ihlamur', 'İncir', 'Japon Gülü (Sakura)', 'Kan Portakalı',
+  'Kara Dut', 'Karambola', 'Karayemiş', 'Kayısı', 'Keçiboynuzu',
+  'Kestane', 'Kiraz', 'Kızılcık', 'Kumkuat', 'Ladin',
+  'Limon', 'Liçi', 'Mandalina', 'Mango', 'Meşe',
+  'Muşmula', 'Muz', 'Napolyon Kirazı', 'Nar', 'Nektarin',
+  'Papaya', 'Pekan Cevizi', 'Pitaya', 'Portakal', 'Rambutan',
+  'Sakız Ağacı', 'Sedir', 'Servi', 'Sumak', 'Şeftali',
+  'Trabzon Hurması', 'Turunç', 'Üzüm Asması', 'Vişne', 'Yabani Elma',
+  'Yaban Mersini', 'Yenidünya', 'Zeytin'
+].sort();
 
 function TreeForm({ initialTree, onSave, onCancel, token }) {
   const [nameSelection, setNameSelection] = useState(''); // Dropdown seçimi
@@ -1789,10 +1785,16 @@ function TreeForm({ initialTree, onSave, onCancel, token }) {
           onChange={(e) => setCategory(e.target.value)}
         >
           <option value="genel">Genel</option>
-          <option value="meyve">Meyve Ağacı</option>
-          <option value="sus">Süs Ağacı</option>
-          <option value="igne-yaprakli">İğne Yapraklı</option>
-          <option value="diger">Diğer</option>
+          <option value="meyve">Meyve Ağaçları (Elma, Armut, Kiraz, Şeftali, Zeytin, Nar...)</option>
+          <option value="narenciye">Narenciye (Portakal, Mandalina, Limon, Greyfurt...)</option>
+          <option value="tropik">Tropik Meyveler (Mango, Avokado, Muz, Papaya, Liçi...)</option>
+          <option value="sert-kabuklu">Sert Kabuklu Meyveler (Ceviz, Fındık, Badem, Kestane...)</option>
+          <option value="sus-agaci">Süs Ağaçları (Akçaağaç, Meşe, Ihlamur, Sakura...)</option>
+          <option value="igne-yaprakli">İğne Yapraklı (Çam, Sedir, Ladin, Servi...)</option>
+          <option value="yumusak-meyveli">Yumuşak Meyveli (Ahududu, Böğürtlen, Bektaşi Üzümü...)</option>
+          <option value="yabani-meyve">Yabani Meyveler (Yabani Elma, Yaban Mersini...)</option>
+          <option value="reçineli">Reçineli (Sakız Ağacı...)</option>
+          <option value="baharat">Baharat (Sumak...)</option>
         </select>
       </label>
 
@@ -1914,6 +1916,10 @@ function VegetableManager({ token }) {
   const [showForm, setShowForm] = useState(false);
   const [editingVeg, setEditingVeg] = useState(null);
   const [selectedVeg, setSelectedVeg] = useState(null);
+
+  // Filtreleme ve sıralama state'leri
+  const [sortBy, setSortBy] = useState('name-asc');
+  const [filterCategory, setFilterCategory] = useState('all');
 
   // Görünüm modunu al
   const [viewMode, setViewMode] = useState('card');
@@ -2040,6 +2046,44 @@ function VegetableManager({ token }) {
     setSelectedVeg(null);
   };
 
+  // Filtreleme ve sıralama işlemleri
+  const getFilteredAndSortedVeggies = () => {
+    let filtered = [...veggies];
+
+    // Kategori filtresi
+    if (filterCategory !== 'all') {
+      filtered = filtered.filter((v) => v.category === filterCategory);
+    }
+
+    // Sıralama
+    filtered.sort((a, b) => {
+      // Önce sayısı sıfır olanları sona at
+      const aIsZero = (a.count || 0) === 0;
+      const bIsZero = (b.count || 0) === 0;
+
+      if (aIsZero && !bIsZero) return 1;
+      if (!aIsZero && bIsZero) return -1;
+
+      // Her ikisi de sıfır veya her ikisi de sıfır değilse normal sıralama
+      switch (sortBy) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name, 'tr');
+        case 'name-desc':
+          return b.name.localeCompare(a.name, 'tr');
+        case 'date-new':
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        case 'date-old':
+          return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+        case 'category':
+          return a.category.localeCompare(b.category, 'tr');
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  };
+
   const handleMaintenanceToggle = async (
     vegId,
     month,
@@ -2085,10 +2129,51 @@ function VegetableManager({ token }) {
     }
   };
 
+  const filteredVeggies = getFilteredAndSortedVeggies();
+
   return (
     <div>
-      <div className="section-header">
+      <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
         <h2>Sebzeler</h2>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+          <label style={{ fontWeight: 'bold' }}>Kategori:</label>
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            class="settings-select" >
+            <option value="all">Tümü</option>
+            <option value="genel">Genel</option>
+            <option value="yaprakli">Yapraklı</option>
+            <option value="kok">Kök Sebzeler</option>
+            <option value="meyveli">Meyveli Sebzeler</option>
+            <option value="kabakgil">Kabakgiller</option>
+            <option value="baklagil">Baklagiller</option>
+            <option value="sogansi">Soğansı Bitkiler</option>
+            <option value="aromatik">Aromatik Otlar</option>
+            <option value="ozel">Özel Sebzeler</option>
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+          <label style={{ fontWeight: 'bold' }}>Sırala:</label>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            class="settings-select"
+          >
+            <option value="name-asc">İsim (A-Z)</option>
+            <option value="name-desc">İsim (Z-A)</option>
+            <option value="date-new">Tarih (Yeni-Eski)</option>
+            <option value="date-old">Tarih (Eski-Yeni)</option>
+            <option value="category">Kategoriye Göre</option>
+          </select>
+        </div>
+
+        <div style={{ fontSize: '0.85rem', color: '#666', marginRight: 'auto' }}>
+          {filteredVeggies.filter(v => (v.count || 0) > 0).length} sebze
+        </div>
+
         <button className="btn primary" onClick={handleCreate}>
           + Yeni Sebze
         </button>
@@ -2098,7 +2183,7 @@ function VegetableManager({ token }) {
       {error && <p className="error-text">{error}</p>}
 
       <div className={viewMode === 'list' ? 'items-list' : 'cards-grid'}>
-        {veggies.map((veg) => {
+        {filteredVeggies.map((veg) => {
           const totalTasks = veg.maintenance?.length || 0;
           const doneTasks =
             veg.maintenance?.filter((m) => m.completed).length || 0;
@@ -2106,11 +2191,14 @@ function VegetableManager({ token }) {
             ? Math.round((doneTasks / totalTasks) * 100)
             : 0;
 
+          const isZeroCount = (veg.count || 0) === 0;
+
           return (
             <div
               key={veg._id}
               className={viewMode === 'list' ? 'item-row' : 'tree-card'}
               onClick={() => setSelectedVeg(veg)}
+              style={{ opacity: isZeroCount ? 0.5 : 1 }}
             >
               <div className="tree-card-image-wrapper">
                 <img
@@ -2373,6 +2461,10 @@ function TreeManager({ token }) {
   const [editingTree, setEditingTree] = useState(null);
   const [selectedTree, setSelectedTree] = useState(null);
 
+  // Filtreleme ve sıralama state'leri
+  const [sortBy, setSortBy] = useState('name-asc');
+  const [filterCategory, setFilterCategory] = useState('all');
+
   // Görünüm modunu al
   const [viewMode, setViewMode] = useState('card');
   useEffect(() => {
@@ -2539,10 +2631,90 @@ function TreeManager({ token }) {
     setSelectedTree(null);
   };
 
+  // Filtreleme ve sıralama işlemleri
+  const getFilteredAndSortedTrees = () => {
+    let filtered = [...trees];
+
+    // Kategori filtresi
+    if (filterCategory !== 'all') {
+      filtered = filtered.filter((t) => t.category === filterCategory);
+    }
+
+    // Sıralama
+    filtered.sort((a, b) => {
+      // Önce sayısı sıfır olanları sona at
+      const aIsZero = (a.count || 0) === 0;
+      const bIsZero = (b.count || 0) === 0;
+
+      if (aIsZero && !bIsZero) return 1;
+      if (!aIsZero && bIsZero) return -1;
+
+      // Her ikisi de sıfır veya her ikisi de sıfır değilse normal sıralama
+      switch (sortBy) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name, 'tr');
+        case 'name-desc':
+          return b.name.localeCompare(a.name, 'tr');
+        case 'date-new':
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        case 'date-old':
+          return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+        case 'category':
+          return a.category.localeCompare(b.category, 'tr');
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  };
+
+  const filteredTrees = getFilteredAndSortedTrees();
+
   return (
     <div>
-      <div className="section-header">
+      <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
         <h2>Ağaçlar</h2>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+          <label style={{ fontWeight: 'bold' }}>Kategori:</label>
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            class="settings-select"  >
+            <option value="all">Tümü</option>
+            <option value="genel">Genel</option>
+            <option value="meyve">Meyve Ağaçları</option>
+            <option value="narenciye">Narenciye</option>
+            <option value="tropik">Tropik Meyveler</option>
+            <option value="sert-kabuklu">Sert Kabuklu Meyveler</option>
+            <option value="sus-agaci">Süs Ağaçları</option>
+            <option value="igne-yaprakli">İğne Yapraklı</option>
+            <option value="yumusak-meyveli">Yumuşak Meyveli</option>
+            <option value="yabani-meyve">Yabani Meyveler</option>
+            <option value="recineli">Reçineli</option>
+            <option value="baharat">Baharat</option>
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+          <label style={{ fontWeight: 'bold' }}>Sırala:</label>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            class="settings-select" >
+            <option value="name-asc">İsim (A-Z)</option>
+            <option value="name-desc">İsim (Z-A)</option>
+            <option value="date-new">Tarih (Yeni-Eski)</option>
+            <option value="date-old">Tarih (Eski-Yeni)</option>
+            <option value="category">Kategoriye Göre</option>
+          </select>
+        </div>
+
+        <div style={{ fontSize: '0.85rem', color: '#666', marginRight: 'auto' }}>
+          {filteredTrees.filter(t => (t.count || 0) > 0).length} ağaç
+        </div>
+
         <button className="btn primary" onClick={handleCreate}>
           + Yeni Ağaç
         </button>
@@ -2552,7 +2724,7 @@ function TreeManager({ token }) {
       {error && <p className="error-text">{error}</p>}
 
       <div className={viewMode === 'list' ? 'items-list' : 'cards-grid'}>
-        {trees.map((tree) => {
+        {filteredTrees.map((tree) => {
           const totalTasks = tree.maintenance?.length || 0;
           const doneTasks =
             tree.maintenance?.filter((m) => m.completed).length || 0;
@@ -2560,11 +2732,14 @@ function TreeManager({ token }) {
             ? Math.round((doneTasks / totalTasks) * 100)
             : 0;
 
+          const isZeroCount = (tree.count || 0) === 0;
+
           return (
             <div
               key={tree._id}
               className={viewMode === 'list' ? 'item-row' : 'tree-card'}
               onClick={() => setSelectedTree(tree)}
+              style={{ opacity: isZeroCount ? 0.5 : 1 }}
             >
               <div className="tree-card-image-wrapper">
              <img
@@ -3629,6 +3804,9 @@ function CalendarView({ token, onSelectMonth }) {
     }));
 
     items.forEach((item) => {
+      // Adeti 0 olanları görev sayısına dahil etme
+      if ((item.count || 0) === 0) return;
+
       (item.maintenance || []).forEach((m) => {
         if (m.month >= 1 && m.month <= 12) {
           base[m.month - 1].total += 1;
@@ -3754,6 +3932,7 @@ function Home({ token }) {
     gardenSize: 0,
     experienceLevel: 'beginner'
   });
+  const [showAllUrgentTasks, setShowAllUrgentTasks] = useState(false);
 
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
@@ -3794,6 +3973,42 @@ function Home({ token }) {
     fetchAll();
   }, [token]);
 
+  // Acil görevi tamamla
+  const handleCompleteUrgentTask = async (task) => {
+    const endpoint = task.type === 'Ağaç' ? 'trees' : 'vegetables';
+    const url = `${API_URL}/${endpoint}/${task.id}/maintenance/${task.month}/toggle`;
+
+    try {
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.message || 'Görev tamamlanamadı.');
+        return;
+      }
+
+      // Listeyi güncelle
+      if (task.type === 'Ağaç') {
+        setTrees((prev) =>
+          prev.map((t) => (t._id === data.tree._id ? data.tree : t))
+        );
+      } else {
+        setVeggies((prev) =>
+          prev.map((v) => (v._id === data.vegetable._id ? data.vegetable : v))
+        );
+      }
+    } catch (err) {
+      console.error('Görev tamamlama hatası:', err);
+      alert('Sunucu hatası.');
+    }
+  };
+
   // Profil bilgilerini yükle
   useEffect(() => {
     const loadProfile = () => {
@@ -3822,9 +4037,12 @@ function Home({ token }) {
   let treeDone = 0;
   let vegTasks = 0;
   let vegDone = 0;
-  
+
 
   trees.forEach((t) => {
+    // Adeti 0 olanları görev sayısına dahil etme
+    if ((t.count || 0) === 0) return;
+
     (t.maintenance || []).forEach((m) => {
       if (m.month === currentMonth) {
         treeTasks++;
@@ -3834,6 +4052,9 @@ function Home({ token }) {
   });
 
   veggies.forEach((v) => {
+    // Adeti 0 olanları görev sayısına dahil etme
+    if ((v.count || 0) === 0) return;
+
     (v.maintenance || []).forEach((m) => {
       if (m.month === currentMonth) {
         vegTasks++;
@@ -3978,6 +4199,9 @@ const treePercent =
 
   // Ağaçlar için acil görevler: budama, ilaçlama, gübreleme (sezon içindeyse), sulama (sezon içindeyse)
   trees.forEach((t) => {
+    // Adeti 0 olanları acil görevlere dahil etme
+    if ((t.count || 0) === 0) return;
+
     const monthTask = t.maintenance?.find(m => m.month === currentMonth && !m.completed);
     if (monthTask) {
       const taskText = monthTask.tasks || '';
@@ -3998,13 +4222,22 @@ const treePercent =
       const isWateringUrgent = hasWatering && isWateringSeason;
 
       if (hasPruningOrSpray || isFertilizingUrgent || isWateringUrgent) {
-        urgentTasks.push({ type: 'Ağaç', name: t.name, task: taskText });
+        urgentTasks.push({
+          type: 'Ağaç',
+          name: t.name,
+          task: taskText,
+          id: t._id,
+          month: currentMonth
+        });
       }
     }
   });
 
   // Sebzeler için acil görevler: sadece ekim ve ilaçlama (zamanında yapılması kritik)
   veggies.forEach((v) => {
+    // Adeti 0 olanları acil görevlere dahil etme
+    if ((v.count || 0) === 0) return;
+
     const monthTask = v.maintenance?.find(m => m.month === currentMonth && !m.completed);
     if (monthTask) {
       const taskText = monthTask.tasks || '';
@@ -4014,7 +4247,13 @@ const treePercent =
       const isFuturePlanning = /gelecek|planlama|plan yap|hazırlık|düşün/i.test(taskText);
 
       if (isUrgent && !isFuturePlanning) {
-        urgentTasks.push({ type: 'Sebze', name: v.name, task: taskText });
+        urgentTasks.push({
+          type: 'Sebze',
+          name: v.name,
+          task: taskText,
+          id: v._id,
+          month: currentMonth
+        });
       }
     }
   });
@@ -4073,8 +4312,17 @@ const treePercent =
             </div>
             {urgentTasks.length > 0 ? (
               <div className="urgent-list">
-                {urgentTasks.slice(0, 3).map((task, idx) => (
-                  <div key={idx} className="urgent-item">
+                {(showAllUrgentTasks ? urgentTasks : urgentTasks.slice(0, 3)).map((task, idx) => (
+                  <div
+                    key={idx}
+                    className="urgent-item"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCompleteUrgentTask(task);
+                    }}
+                    style={{ cursor: 'pointer' }}
+                    title="Tamamlamak için tıkla"
+                  >
                     <div className="urgent-item-header">
                       <span className="urgent-type">{task.type}</span>
                       <span className="urgent-name">{task.name}</span>
@@ -4082,8 +4330,23 @@ const treePercent =
                     <div className="urgent-task-detail">{task.task}</div>
                   </div>
                 ))}
-                {urgentTasks.length > 3 && (
-                  <div className="urgent-more">+{urgentTasks.length - 3} görev daha</div>
+                {urgentTasks.length > 3 && !showAllUrgentTasks && (
+                  <div
+                    className="urgent-more"
+                    onClick={() => setShowAllUrgentTasks(true)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    +{urgentTasks.length - 3} görev daha
+                  </div>
+                )}
+                {showAllUrgentTasks && urgentTasks.length > 3 && (
+                  <div
+                    className="urgent-more"
+                    onClick={() => setShowAllUrgentTasks(false)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    Daha az göster
+                  </div>
                 )}
               </div>
             ) : (

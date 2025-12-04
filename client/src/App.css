@@ -267,7 +267,7 @@ textarea {
 
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -914,6 +914,13 @@ body.theme-dark .season-alert-item {
   padding: 8px 10px;
   border-radius: 8px;
   font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.urgent-item:hover {
+  background: rgba(34, 197, 94, 0.2);
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .urgent-item-header {
@@ -949,6 +956,14 @@ body.theme-dark .season-alert-item {
   font-size: 0.75rem;
   font-style: italic;
   margin-top: 4px;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.urgent-more:hover {
+  background: rgba(59, 130, 246, 0.1);
+  font-weight: 600;
 }
 
 /* Dark mode için bugünün özeti */
