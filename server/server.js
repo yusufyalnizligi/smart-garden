@@ -17,8 +17,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 /* -------------------- CORS -------------------- */
 const allowedOrigins = [
   'https://oguzemrecakil.com.tr',
-  'http://localhost:3001',
-  'http://localhost:3000'
+  'http://localhost:5001',
+  'http://localhost:5000'
 ];
 
 app.use((req, res, next) => {
@@ -115,7 +115,7 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   );
 }
 
- 
+
 /* -------------------- Multer (Resim Upload) -------------------- */
 const storage = multer.diskStorage({
   destination: function (_, __, cb) {
@@ -125,9 +125,9 @@ const storage = multer.diskStorage({
     cb(
       null,
       Date.now() +
-        '-' +
-        Math.round(Math.random() * 1e9) +
-        path.extname(file.originalname)
+      '-' +
+      Math.round(Math.random() * 1e9) +
+      path.extname(file.originalname)
     );
   }
 });
@@ -170,6 +170,23 @@ const treeSchema = new mongoose.Schema(
     // 🆕 KATEGORİ
     category: { type: String, default: 'genel' },
 
+    // 🗺️ GPS KONUM (Multi-Location Support)
+    locations: [{
+      lat: Number,
+      lng: Number,
+      accuracy: Number,
+      setAt: Date,
+      count: { type: Number, default: 1 }
+    }],
+
+    // Legacy Location (Backward Compatibility)
+    location: {
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
+      accuracy: { type: Number, default: null },
+      setAt: { type: Date, default: null }
+    },
+
     maintenance: [maintenanceSchema]
   },
   { timestamps: true }
@@ -185,11 +202,34 @@ const vegetableSchema = new mongoose.Schema(
     // 🆕 KATEGORİ
     category: { type: String, default: 'genel' },
 
+    // 🗺️ GPS KONUM (Multi-Location Support)
+    locations: [{
+      lat: Number,
+      lng: Number,
+      accuracy: Number,
+      setAt: Date,
+      count: { type: Number, default: 1 }
+    }],
+
+    // Legacy Location
+    location: {
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
+      accuracy: { type: Number, default: null },
+      setAt: { type: Date, default: null }
+    },
+
     maintenance: [maintenanceSchema]
   },
   { timestamps: true }
 );
 
+
+const customLabelSchema = new mongoose.Schema({
+  text: { type: String, required: true },
+  lat: { type: Number, required: true },
+  lng: { type: Number, required: true },
+}, { timestamps: true });
 
 const adminSchema = new mongoose.Schema({
   username: { type: String, unique: true, required: true },
@@ -280,11 +320,29 @@ const dailyReminderLogSchema = new mongoose.Schema({
 });
 dailyReminderLogSchema.index({ user: 1, date: 1 }, { unique: true });
 
+const gardenSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
+  name: { type: String, default: 'Bahçem' },
+  boundaries: [{
+    lat: { type: Number, required: true },
+    lng: { type: Number, required: true }
+  }], // Polygon coordinates
+  center: {
+    lat: { type: Number, default: 38.787308 },
+    lng: { type: Number, default: 39.149078 }
+  },
+  zoom: { type: Number, default: 19 },
+  area: { type: Number, default: 2370 }, // m² cinsinden alan
+  notes: String
+}, { timestamps: true });
+
 const Tree = mongoose.model('Tree', treeSchema);
 const Vegetable = mongoose.model('Vegetable', vegetableSchema);
 const Admin = mongoose.model('Admin', adminSchema);
 const PushSubscription = mongoose.model('PushSubscription', pushSubscriptionSchema);
 const DailyReminderLog = mongoose.model('DailyReminderLog', dailyReminderLogSchema);
+const Garden = mongoose.model('Garden', gardenSchema);
+const CustomLabel = mongoose.model('CustomLabel', customLabelSchema);
 
 /* -------------------- Auth Middleware -------------------- */
 function authMiddleware(req, res, next) {
@@ -466,7 +524,7 @@ app.patch('/api/settings/email', authMiddleware, async (req, res) => {
 
 /* -------------------- Geçmiş Bakım Raporu -------------------- */
 
- /* -------------------- Geçmiş Bakım Raporu -------------------- */
+/* -------------------- Geçmiş Bakım Raporu -------------------- */
 
 app.get('/api/reports/history', authMiddleware, async (req, res) => {
   try {
@@ -488,10 +546,10 @@ app.get('/api/reports/history', authMiddleware, async (req, res) => {
         notes: m.notes || '',
         type:
           m.tasks?.toLowerCase().includes('budama') ? 'Budama' :
-          m.tasks?.toLowerCase().includes('ilaç')  ? 'İlaçlama' :
-          m.tasks?.toLowerCase().includes('gübre') ? 'Gübreleme' :
-          m.tasks?.toLowerCase().includes('sula')  ? 'Sulama' :
-          'Genel Bakım'
+            m.tasks?.toLowerCase().includes('ilaç') ? 'İlaçlama' :
+              m.tasks?.toLowerCase().includes('gübre') ? 'Gübreleme' :
+                m.tasks?.toLowerCase().includes('sula') ? 'Sulama' :
+                  'Genel Bakım'
       });
     };
 
@@ -639,9 +697,8 @@ app.get('/api/recommendations', authMiddleware, async (req, res) => {
       else if (diff > 0) category = 'gelecek';
 
       const base = {
-        id: `${kind}-${owner._id}-${m.month}-${
-          m._id || Math.random().toString(36).slice(2)
-        }`,
+        id: `${kind}-${owner._id}-${m.month}-${m._id || Math.random().toString(36).slice(2)
+          }`,
         kind, // 'tree' | 'vegetable'
         name: owner.name,
         month: m.month,
@@ -747,7 +804,7 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 /* -------------------- Hava Durumu (Elazığ sabit) -------------------- */
- /* -------------------- Hava Durumu (Geniş Panel) -------------------- */
+/* -------------------- Hava Durumu (Geniş Panel) -------------------- */
 /* -------------------- Hava Durumu (Geniş Panel) -------------------- */
 app.get('/api/weather/extended', authMiddleware, async (req, res) => {
   if (!WEATHER_API_KEY) {
@@ -1001,9 +1058,9 @@ app.get('/api/weather/extended', authMiddleware, async (req, res) => {
       daily,
       air: airCurrent
         ? {
-            aqi: airCurrent.main?.aqi,
-            ...airCurrent.components
-          }
+          aqi: airCurrent.main?.aqi,
+          ...airCurrent.components
+        }
         : null
     });
   } catch (err) {
@@ -1596,7 +1653,7 @@ app.get('/api/veg-reminders/:month', authMiddleware, async (req, res) => {
 /* -------------------- E-posta Hatırlatma -------------------- */
 
 // Ağaç
- // AYLIK BAKIMI MAIL OLARAK GÖNDER (SADECE TAMAMLANMAMIŞ GÖREVLER)
+// AYLIK BAKIMI MAIL OLARAK GÖNDER (SADECE TAMAMLANMAMIŞ GÖREVLER)
 // AYLIK BAKIMI MAIL OLARAK GÖNDER (SADECE TAMAMLANMAMIŞ GÖREVLER)
 app.post('/api/reminders/send-email', authMiddleware, async (req, res) => {
   try {
@@ -1629,7 +1686,7 @@ app.post('/api/reminders/send-email', authMiddleware, async (req, res) => {
     }
 
     // 2) SADECE TAMAMLANMAMIŞ görevleri al (completed !== true)
-       const lines = trees
+    const lines = trees
       .map((t) => {
         const incompletes = (t.maintenance || [])
           .filter((m) => {
@@ -1653,7 +1710,7 @@ app.post('/api/reminders/send-email', authMiddleware, async (req, res) => {
       .filter(Boolean);
 
     // 3) Hiç tamamlanmamış görev yoksa MAIL GÖNDERME
-        if (!lines.length) {
+    if (!lines.length) {
       return res.json({
         message: onlyImportant
           ? `${MONTH_NAMES[month - 1]} ayı için ÖNEMLİ (budama/ilaç/sulama/gübre) TAMAMLANMAMIŞ bakım bulunmuyor.`
@@ -1728,7 +1785,7 @@ app.post('/api/veg-reminders/send-email', authMiddleware, async (req, res) => {
     }
 
     // 2) SADECE TAMAMLANMAMIŞ görevleri (completed !== true) topla
-        const lines = veggies
+    const lines = veggies
       .map((v) => {
         const incompletes = (v.maintenance || [])
           .filter((m) => {
@@ -1752,7 +1809,7 @@ app.post('/api/veg-reminders/send-email', authMiddleware, async (req, res) => {
       .filter(Boolean);
 
     // 3) Hiç tamamlanmamış sebze görevi yoksa MAIL GÖNDERME
-       if (!lines.length) {
+    if (!lines.length) {
       return res.json({
         message: onlyImportant
           ? `${MONTH_NAMES[month - 1]} ayı için SEBZELERDE ÖNEMLİ TAMAMLANMAMIŞ bakım yok.`
@@ -1888,7 +1945,7 @@ app.post('/api/push/send-reminders', authMiddleware, async (req, res) => {
       });
     }
 
-        const namesWithTasks = trees
+    const namesWithTasks = trees
       .map((t) => {
         const incompletes = (t.maintenance || [])
           .filter((mm) => {
@@ -1909,7 +1966,7 @@ app.post('/api/push/send-reminders', authMiddleware, async (req, res) => {
       .filter(Boolean);
 
 
-        if (!namesWithTasks.length) {
+    if (!namesWithTasks.length) {
       return res.json({
         message: onlyImportant
           ? `${MONTH_NAMES[m - 1]} ayı için ÖNEMLİ TAMAMLANMAMIŞ ağaç bakımı yok.`
@@ -2020,19 +2077,19 @@ app.post(
       }
 
       const namesWithTasks = vegetables
-      .map((v) => {
-        const incompletes = (v.maintenance || [])
-          .filter((mm) => {
-            const sameMonth = mm.month === m && !mm.completed;
-            if (!sameMonth) return false;
+        .map((v) => {
+          const incompletes = (v.maintenance || [])
+            .filter((mm) => {
+              const sameMonth = mm.month === m && !mm.completed;
+              if (!sameMonth) return false;
 
-            if (onlyImportant) {
-              return isImportantTask(mm.tasks);
-            }
-            return true;
-          })
-          .map((mm) => mm.tasks)
-          .join(', ');
+              if (onlyImportant) {
+                return isImportantTask(mm.tasks);
+              }
+              return true;
+            })
+            .map((mm) => mm.tasks)
+            .join(', ');
 
           if (!incompletes) return null;
           return `${v.name} (${incompletes})`;
@@ -2111,7 +2168,7 @@ app.post(
 );
 /* -------------------- Bakım Raporu (Geçmiş / Özet) -------------------- */
 
- /* -------------------- Bakım Raporu (Geçmiş / Özet) -------------------- */
+/* -------------------- Bakım Raporu (Geçmiş / Özet) -------------------- */
 
 app.get('/api/reports/history-summary', authMiddleware, async (req, res) => {
   try {
@@ -2767,5 +2824,14 @@ function setupCronJobs() {
   console.log('   📅 Her ayın 1. günü saat 08:00 - Bakım raporu');
   console.log('   📅 Her ayın 15. günü saat 08:00 - Bakım raporu');
 }
+
+/* -------------------- GPS Harita API Rotaları -------------------- */
+const mapRoutes = require('./map-routes');
+
+// Map routes için middleware - modelleri inject et
+app.use('/api/map', authMiddleware, (req, res, next) => {
+  req.models = { Tree, Vegetable, Garden, CustomLabel };
+  next();
+}, mapRoutes);
 
 start();

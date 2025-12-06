@@ -1,0 +1,332 @@
+/* Leaflet Map Kapsayıcısı */
+.leaflet-container {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    z-index: 10;
+}
+
+/* Harita Kontrol Paneli */
+.map-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background-color: rgba(255, 255, 255, 0.95);
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-width: 250px;
+}
+
+.map-control-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    color: #444;
+}
+
+.map-control-btn:hover {
+    background-color: #f0f0f0;
+    border-color: #ccc;
+}
+
+.map-control-btn.active {
+    background-color: #e6f4ea;
+    border-color: #34a853;
+    color: #34a853;
+}
+
+.map-control-btn svg {
+    font-size: 1.1rem;
+}
+
+/* Marker Popup Stilleri */
+.custom-popup .leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.custom-popup .leaflet-popup-content {
+    margin: 0;
+    width: 280px;
+}
+
+.popup-header {
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.popup-header img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.popup-title h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #333;
+}
+
+.popup-title span {
+    font-size: 0.8rem;
+    color: #666;
+    text-transform: capitalize;
+}
+
+.popup-body {
+    padding: 12px;
+}
+
+.popup-info {
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    color: #555;
+    line-height: 1.4;
+}
+
+.popup-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.popup-btn {
+    flex: 1;
+    padding: 6px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: white;
+    transition: opacity 0.2s;
+}
+
+.popup-btn:hover {
+    opacity: 0.9;
+}
+
+.popup-btn.edit {
+    background-color: #fbbc05;
+}
+
+.popup-btn.details {
+    background-color: #4285f4;
+}
+
+/* Bahçe Bilgi Paneli */
+.garden-info-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+    background-color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.garden-stat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: #444;
+}
+
+.garden-stat strong {
+    color: #333;
+}
+
+/* Modlar için renk kodları */
+.mode-indicator {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.mode-view {
+    background-color: #e8f0fe;
+    color: #1967d2;
+}
+
+.mode-edit-location {
+    background-color: #ffeaaa;
+    color: #b76e00;
+}
+
+.mode-draw-boundary {
+    background-color: #fce8e6;
+    color: #c5221f;
+}
+
+/* Harita Toolbar */
+.map-toolbar {
+    position: absolute;
+    top: 10px;
+    left: 50px;
+    /* Zoom kontrolünün yanına */
+    z-index: 1000;
+    display: flex;
+    gap: 5px;
+    background: white;
+    padding: 5px;
+    border-radius: 4px;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+}
+
+.toolbar-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #555;
+}
+
+.toolbar-btn:hover {
+    background-color: #f5f5f5;
+}
+
+.toolbar-btn.active {
+    background-color: #e6f4ea;
+    color: #34a853;
+    border-color: #34a853;
+}
+
+/* Loading Overlay */
+.map-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #34a853;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Unplaced Items Sidebar */
+.unplaced-items-panel {
+    position: absolute;
+    top: 70px;
+    right: 10px;
+    width: 250px;
+    max-height: 400px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    padding: 10px;
+    overflow-y: auto;
+    backdrop-filter: blur(5px);
+}
+
+.unplaced-items-panel h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}
+
+.unplaced-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.unplaced-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    background: #f8f9fa;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 13px;
+}
+
+.unplaced-item:hover {
+    background: #e9ecef;
+    border-color: #ced4da;
+    transform: translateX(-2px);
+}
+
+.unplaced-item span {
+    font-weight: 500;
+    color: #495057;
+}
+
+.unplaced-item small {
+    color: #28a745;
+    font-weight: bold;
+}
+
+/* Marker üzerindeki küçük etiket */
+.marker-label-small {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ccc;
+    box-shadow: none;
+    font-size: 11px;
+    font-weight: bold;
+    color: #333;
+    padding: 2px 5px;
+    border-radius: 4px;
+    white-space: nowrap;
+}

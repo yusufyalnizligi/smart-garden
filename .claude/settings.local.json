@@ -26,7 +26,13 @@
       "Bash(cmd //c taskkill //PID 20188 //F)",
       "Bash(powershell -Command \"Get-Content ''client\\src\\App.css'' | Measure-Object -Line | Select-Object -ExpandProperty Lines\")",
       "Bash(powershell:*)",
-      "Bash(cmd //c taskkill //PID 29292 //F)"
+      "Bash(cmd //c taskkill //PID 29292 //F)",
+      "Bash(dir:*)",
+      "Bash(node seedData.js:*)",
+      "Bash(node downloadImages.js)",
+      "Bash(node addMissingTrees.js:*)",
+      "Bash(node addMissingVegetables.js:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

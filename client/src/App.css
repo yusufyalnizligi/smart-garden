@@ -42,7 +42,7 @@ body {
   color: #6b7280;
 }
 
- 
+
 /* =========== BUTONLAR =========== */
 
 .btn {
@@ -89,7 +89,7 @@ body {
   font-size: 1rem;
 }
 
- 
+
 
 /* =========== KART, FORM, METİN =========== */
 
@@ -157,7 +157,7 @@ textarea {
   margin-top: 4px;
 }
 
- 
+
 
 /* =========== LOGIN =========== */
 
@@ -554,13 +554,16 @@ textarea {
 
 .reminder-card-tree {
   cursor: pointer;
-  transition: transform 0.08s ease, box-shadow 0.1s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
   padding: 16px !important;
+  border: 1px solid #d1d5db;
+  border-left: 6px solid #4f46e5;
 }
 
 .reminder-card-tree:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  border-color: #9ca3af;
 }
 
 .card-header-row {
@@ -601,7 +604,7 @@ textarea {
 }
 
 /* Bakım Hatırlatmaları sayfası için özel düzenlemeler */
-.card + h3 {
+.card+h3 {
   margin-top: 32px;
   margin-bottom: 8px;
   font-size: 1.3rem;
@@ -609,16 +612,16 @@ textarea {
   color: #111827;
 }
 
-.card + .card {
+.card+.card {
   margin-top: 20px;
 }
 
 /* Bildirim kartları için ekstra padding */
-.card .section-header + .notify-row {
+.card .section-header+.notify-row {
   margin-top: 16px;
 }
 
-.card .notify-row + label {
+.card .notify-row+label {
   margin-top: 12px;
 }
 
@@ -1146,9 +1149,10 @@ body.theme-dark .garden-stat-value {
 main {
   margin-top: 8px;
 }
+
 /* =========== Rapor Tablosu =========== */
 
- 
+
 
 .report-table th,
 .report-table td {
@@ -1166,6 +1170,7 @@ main {
   font-weight: 600;
   border-top: 2px solid #e5e7eb;
 }
+
 /* =========== Home Progress Grafik =========== */
 
 .home-progress {
@@ -1197,10 +1202,12 @@ main {
   background: linear-gradient(90deg, #22c55e, #4ade80);
   transition: width 0.25s ease-out;
 }
+
 /* =========== Mobil Uyum Ekleri =========== */
 
 /* 600px ve altı: telefon portre görünümü */
 @media (max-width: 600px) {
+
   /* Uygulama genel padding biraz daralsın */
   .app {
     padding: 8px 8px 24px;
@@ -1257,6 +1264,7 @@ main {
 
 /* 400px ve altı: çok küçük ekranlar (eski telefonlar vs.) */
 @media (max-width: 400px) {
+
   /* Ay bazlı bakım formu tek sütun */
   .months-grid {
     grid-template-columns: 1fr;
@@ -1271,25 +1279,30 @@ main {
     font-size: 0.78rem;
   }
 }
+
 .report-table-wrapper {
   width: 100%;
-  overflow-x: auto;      /* 🔥 dar ekranda yatay kaydırma */
+  overflow-x: auto;
+  /* 🔥 dar ekranda yatay kaydırma */
   -webkit-overflow-scrolling: touch;
 }
 
 /* Tablo genişliğini biraz sabitle ki daralınca bozulmasın */
 .report-table {
   width: 100%;
-  min-width: 640px;      /* mobilde taşarsa wrapper içinde scroll olacak */
+  min-width: 640px;
+  /* mobilde taşarsa wrapper içinde scroll olacak */
   border-collapse: collapse;
   font-size: 0.9rem;
   margin-top: 8px;
 }
+
 .month-card-subline {
   margin: 0;
   font-size: 0.75rem;
   color: #4b5563;
 }
+
 /* =========== Bakım Etiketleri =========== */
 
 .maintenance-item {
@@ -1348,14 +1361,15 @@ main {
 .maintenance-task-inline {
   font-size: 0.8rem;
 }
+
 .help-text {
   display: block;
   margin-top: 2px;
   font-size: 0.75rem;
   color: #6b7280;
 }
- 
- 
+
+
 
 /* =========== HOME GRAFİKLERİ =========== */
 
@@ -1403,6 +1417,7 @@ main {
   font-size: 1.3rem;
   color: #1f2937;
 }
+
 /* Mobil cihazlar */
 @media (max-width: 768px) {
   .home-charts {
@@ -1418,7 +1433,7 @@ main {
   }
 }
 
- /* =========== Otomatik Bakım Öneri Sistemi =========== */
+/* =========== Otomatik Bakım Öneri Sistemi =========== */
 
 .suggestions-list {
   list-style: none;
@@ -1549,6 +1564,7 @@ main {
     margin-left: 0;
   }
 }
+
 .section-actions {
   display: flex;
   gap: 8px;
@@ -1560,6 +1576,7 @@ main {
   color: #111827;
   border-color: #e5e7eb;
 }
+
 .history-list {
   margin: 12px 0 0;
   padding: 0;
@@ -1610,10 +1627,11 @@ main {
     text-align: left;
   }
 }
+
 /* ==== Raporlar sayfası düzeni ==== */
 
 .reports-page {
-   
+
   margin: 0 auto;
 }
 
@@ -1634,7 +1652,8 @@ main {
 }
 
 .report-month-select {
-  width: 180px;           /* 🔹 Artık dropdown geniş değil */
+  width: 180px;
+  /* 🔹 Artık dropdown geniş değil */
 }
 
 /* Export ve aksiyon butonları */
@@ -1686,6 +1705,7 @@ main {
 .report-table td {
   text-align: center;
 }
+
 .suggestion-footer-row {
   display: flex;
   justify-content: space-between;
@@ -1701,6 +1721,7 @@ main {
   font-size: 0.8rem;
   font-weight: 500;
 }
+
 /* Hava durumu + saat yan yana */
 .weather-clock-row {
   display: flex;
@@ -1784,11 +1805,13 @@ main {
   display: flex;
   flex-direction: column;
 }
+
 .settings-section-widel {
   grid-column: span 3;
   display: flex;
   flex-direction: column;
 }
+
 .settings-section-tall {
   grid-row: span 2;
 }
@@ -1817,6 +1840,12 @@ main {
   color: #6b7280;
 }
 
+.settings-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border-color), transparent);
+  margin: 1.5rem 0;
+}
+
 .settings-item {
   display: flex;
   align-items: center;
@@ -1840,6 +1869,15 @@ main {
 
 .settings-select {
   width: 160px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  background: #f9fafb;
+}
+
+.settings-select-area {
+  width: 320px;
   border-radius: 999px;
   border: 1px solid #e5e7eb;
   padding: 6px 10px;
@@ -1895,11 +1933,13 @@ main {
   display: inline-block;
   width: 42px;
   height: 22px;
-  font-size: 0; /* iç boşluk yazı vs. olmasın */
+  font-size: 0;
+  /* iç boşluk yazı vs. olmasın */
 }
 
-.settings-item > .switch {
-  flex-shrink: 0; /* sağdaki switch taşmasın, esnemesin */
+.settings-item>.switch {
+  flex-shrink: 0;
+  /* sağdaki switch taşmasın, esnemesin */
 }
 
 .switch input {
@@ -1929,22 +1969,50 @@ main {
   border-radius: 50%;
 }
 
-.switch input:checked + .slider {
+.switch input:checked+.slider {
   background-color: #4f46e5;
 }
 
-.switch input:checked + .slider:before {
+.switch input:checked+.slider:before {
   transform: translateX(20px);
 }
 
+.logo-box {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
 .app-logo {
-  width:  150px;
+  width: 50px;
+  height: 50px;
   object-fit: contain;
 }
+
+.app-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  letter-spacing: -0.5px;
+}
+
 .logo-box:hover {
   opacity: 0.85;
   transition: 0.2s;
 }
+
+/* Mobil için başlık */
+@media (max-width: 768px) {
+  .app-logo {
+    width: 40px;
+    height: 40px;
+  }
+
+  .app-title {
+    font-size: 1.1rem;
+  }
+}
+
 /* Tab transition */
 .tab-panel {
   animation: tabFadeSlide 0.18s ease-out;
@@ -1955,11 +2023,13 @@ main {
     opacity: 0;
     transform: translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
+
 /* =========== HAVA DURUMU SAYFASI (GENİŞ PANEL) =========== */
 
 .weather-page {
@@ -1995,7 +2065,8 @@ main {
 }
 
 .weather-main-grid {
-  align-items: stretch; /* grid satır yüksekliği ortak olsun */
+  align-items: stretch;
+  /* grid satır yüksekliği ortak olsun */
 }
 
 /* Sol panel tam yüksekliği kaplasın */
@@ -2124,14 +2195,12 @@ main {
   height: 12px;
   border-radius: 999px;
   overflow: hidden;
-  background: linear-gradient(
-    to right,
-    #22c55e,
-    #eab308,
-    #f97316,
-    #ef4444,
-    #7c2d12
-  );
+  background: linear-gradient(to right,
+      #22c55e,
+      #eab308,
+      #f97316,
+      #ef4444,
+      #7c2d12);
 }
 
 .uv-band-label {
@@ -2339,7 +2408,7 @@ main {
   border: 1px solid #e5e7eb;
 }
 
- 
+
 
 /* Haftalık tahmin */
 
@@ -2403,6 +2472,7 @@ main {
   margin-top: 2px;
   color: #6b7280;
 }
+
 .weather-wind-info {
   margin-top: 10px;
   font-size: 0.8rem;
@@ -2412,6 +2482,7 @@ main {
   flex-direction: column;
   gap: 2px;
 }
+
 /* Sağ kolon panel yüksekliğini tamamen kullansın */
 .weather-main-right {
   display: flex;
@@ -2424,13 +2495,16 @@ main {
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* istersen tam ortaya hizalar */
+  justify-content: center;
+  /* istersen tam ortaya hizalar */
 }
+
 @media (max-width: 768px) {
   .weather-clock-row {
     display: none;
   }
 }
+
 /* Mobil dropdown varsayılan olarak gizli (sadece media query'de açıyoruz) */
 .tabs-mobile-select-wrapper {
   display: none;
@@ -2458,16 +2532,18 @@ main {
     margin-bottom: 10px;
   }
 }
+
 /* Tabs & hamburger genel */
 .tabs-wrapper {
   position: relative;
   margin-bottom: 12px;
 }
 
- 
+
 
 .tabs-mobile-menu {
-  display: none; /* mobil media query'de açılacak */
+  display: none;
+  /* mobil media query'de açılacak */
 }
 
 .tabs-mobile-items {
@@ -2494,13 +2570,14 @@ main {
 
 /* Mobil görünüm */
 @media (max-width: 768px) {
+
   /* Tab bar mobilde tamamen gizlensin */
   nav.tabs {
     display: none;
   }
 
   /* Hamburger butonu mobilde görünsün */
-  
+
 
   /* Mobil açılır menü */
   .tabs-mobile-menu {
@@ -2535,8 +2612,10 @@ main {
     justify-content: flex-start;
   }
 }
+
 .tabs-hamburger {
-  display: none; /* desktop'ta gizli */
+  display: none;
+  /* desktop'ta gizli */
   border: none;
   background: #f3f4f6;
   border-radius: 999px;
@@ -2544,7 +2623,9 @@ main {
   font-size: 1.3rem;
   cursor: pointer;
 }
+
 @media (max-width: 768px) {
+
   /* Tab bar mobilde tamamen gizlensin */
   nav.tabs {
     display: none;
@@ -2611,8 +2692,10 @@ main {
     justify-content: flex-start;
   }
 }
+
 /* Mobilde logo + hamburger aynı satırda, hamburger sağda olsun */
 @media (max-width: 768px) {
+
   /* Logo kartının class'ı neyse onu kullan.
      Eğer sende farklıysa (.app-header-card / .brand-card vs.),
      buradaki .app-header-left'i o class ile değiştir. */
@@ -2623,15 +2706,19 @@ main {
   }
 
   .app-header-left img {
-    max-height: 48px;       /* logo çok büyüksa biraz kısıyor */
+    max-height: 48px;
+    /* logo çok büyüksa biraz kısıyor */
     height: auto;
   }
 
   .tabs-hamburger {
-    display: inline-flex;   /* zaten görünüyor ama garanti olsun */
-    margin-left: auto;      /* logodan sonra sağ tarafa it */
+    display: inline-flex;
+    /* zaten görünüyor ama garanti olsun */
+    margin-left: auto;
+    /* logodan sonra sağ tarafa it */
   }
 }
+
 .mobile-header-info {
   display: none;
 }
@@ -2742,7 +2829,8 @@ main {
 
   .maintenance-table th:nth-child(2),
   .maintenance-table td:nth-child(2) {
-    display: none; /* Mobilde kategori sütununu gizle */
+    display: none;
+    /* Mobilde kategori sütununu gizle */
   }
 
   .maintenance-month-chip {
@@ -3120,4 +3208,477 @@ body.theme-dark .maintenance-chip-inline {
     font-size: 0.75rem !important;
     padding: 4px 8px !important;
   }
+}
+
+/* ======================== FOOTER ======================== */
+.app-footer {
+  background: linear-gradient(135deg, var(--card-bg) 0%, var(--bg-color) 100%);
+  border-top: 2px solid var(--primary-color);
+  padding: 3rem 2rem 1.5rem;
+  margin-top: 3rem;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2.5rem;
+  margin-bottom: 2rem;
+}
+
+.footer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.footer-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.footer-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.footer-heading {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0;
+  margin-bottom: 0.5rem;
+}
+
+.footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.footer-links li {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  transition: all 0.3s ease;
+  padding: 0.3rem 0;
+}
+
+.footer-links li[style*="cursor: pointer"]:hover {
+  color: var(--primary-color);
+  transform: translateX(5px);
+  font-weight: 500;
+}
+
+.footer-links a {
+  transition: all 0.3s ease;
+  display: inline-block;
+}
+
+.footer-links a:hover {
+  color: var(--primary-color);
+  transform: translateX(5px);
+  font-weight: 500;
+}
+
+.footer-version {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
+.footer-bottom {
+  border-top: 1px solid var(--border-color);
+  padding-top: 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.footer-bottom p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.footer-credits {
+  font-size: 0.85rem !important;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+/* Dark mode için footer */
+body.theme-dark .app-footer {
+  background: linear-gradient(135deg, var(--card-bg) 0%, #0a0f1a 100%);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+}
+
+body.theme-dark .footer-title {
+  color: var(--primary-color);
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+body.theme-dark .footer-links li[style*="cursor: pointer"]:hover {
+  color: var(--primary-color);
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+body.theme-dark .footer-links a:hover {
+  color: var(--primary-color);
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+/* Mobil için footer */
+@media (max-width: 768px) {
+  .app-footer {
+    padding: 2rem 1rem 1rem;
+    margin-top: 2rem;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .footer-title {
+    font-size: 1.3rem;
+  }
+
+  .footer-heading {
+    font-size: 1rem;
+  }
+
+  .footer-desc {
+    font-size: 0.85rem;
+  }
+
+  .footer-links li {
+    font-size: 0.85rem;
+  }
+
+  .footer-bottom {
+    padding-top: 1rem;
+  }
+
+  .footer-bottom p {
+    font-size: 0.8rem;
+  }
+
+  .footer-credits {
+    font-size: 0.75rem !important;
+  }
+}
+
+/* Tablet için footer */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+}
+
+/* ======================== SCROLL TO TOP BUTONU ======================== */
+.scroll-to-top-btn {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 50px;
+  height: 50px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+  z-index: 1000;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeInUp 0.3s ease;
+}
+
+.scroll-to-top-btn:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+}
+
+.scroll-to-top-btn:active {
+  transform: translateY(-2px);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dark mode için scroll to top */
+body.theme-dark .scroll-to-top-btn {
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.6);
+}
+
+body.theme-dark .scroll-to-top-btn:hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.8);
+}
+
+/* ======================== CHAT WIDGET ======================== */
+.chat-widget-btn {
+  position: fixed;
+  bottom: 2rem;
+  left: 2rem;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.8rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  z-index: 1000;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 2s infinite;
+}
+
+.chat-widget-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.chat-widget-btn:active {
+  transform: scale(0.95);
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 4px 25px rgba(102, 126, 234, 0.7);
+  }
+}
+
+/* Chat Widget Modal */
+.chat-widget-modal {
+  position: fixed;
+  bottom: 6rem;
+  left: 2rem;
+  width: 320px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  z-index: 1001;
+  animation: slideInLeft 0.3s ease;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.chat-widget-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-widget-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.chat-close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.chat-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.chat-widget-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.chat-welcome {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.chat-info {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.chat-contact-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.chat-option {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 1rem;
+  background: #f5f7fa;
+  border: 1px solid #e1e8ed;
+  border-radius: 10px;
+  color: var(--text-color);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.chat-option:hover {
+  background: var(--primary-color);
+  color: white;
+  transform: translateX(5px);
+  border-color: var(--primary-color);
+}
+
+/* Dark mode için chat widget */
+body.theme-dark .chat-widget-modal {
+  background: #1a1f2e;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  border-color: #2a3142;
+}
+
+body.theme-dark .chat-welcome {
+  color: #ffffff;
+}
+
+body.theme-dark .chat-info {
+  color: #b8c5d0;
+}
+
+body.theme-dark .chat-option {
+  background: #2a3142;
+  border-color: #3a4152;
+  color: #ffffff;
+}
+
+body.theme-dark .chat-option:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+/* Mobil için butonlar */
+@media (max-width: 768px) {
+  .scroll-to-top-btn {
+    bottom: 1rem;
+    right: 1rem;
+    width: 45px;
+    height: 45px;
+    font-size: 1.3rem;
+  }
+
+  .chat-widget-btn {
+    bottom: 1rem;
+    left: 1rem;
+    width: 50px;
+    height: 50px;
+    font-size: 1.5rem;
+  }
+
+  .chat-widget-modal {
+    bottom: 5rem;
+    left: 1rem;
+    right: 1rem;
+    width: calc(100% - 2rem);
+    max-width: 100%;
+  }
+}
+
+/* =========== PROFİL KAYDET / İPTAL BUTONLARI =========== */
+
+.profile-save-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+}
+
+.profile-save-message {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #059669;
+  font-weight: 500;
+}
+
+.profile-save-row .btn {
+  min-width: 100px;
+}
+
+.profile-save-row .btn.primary {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.profile-save-row .btn.primary:hover {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
 }

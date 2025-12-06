@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import {
   Chart as ChartJS,
@@ -12,6 +12,7 @@ import {
   Legend
 } from 'chart.js';
 import { Doughnut, Bar, Line } from 'react-chartjs-2';
+import GardenMapTab from './GardenMapTab'; // 🗺️ Yeni Map Component
 
 ChartJS.register(
   ArcElement,
@@ -26,8 +27,10 @@ ChartJS.register(
 
 
 // Environment-based configuration
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
-const BASE_URL = process.env.REACT_APP_BASE_URL || 'http://localhost:3000';
+// If on localhost (dev), use 5000. If on production (relative), use /api
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_URL = process.env.REACT_APP_API_URL || (isLocal ? 'http://localhost:5000/api' : '/api');
+const BASE_URL = process.env.REACT_APP_BASE_URL || window.location.origin;
 const VAPID_PUBLIC_KEY = 'BO0KSV3iyt34vxggZvjqlE_AOENpuJU19ROPkxmQHuHxpxW4QCdDBSuvHkY9Vqqz8Xil-nCjDLYBecEnr3aN1Vk';
 // -------------------- OTOMATİK BAKIM ÖNERİLERİ -------------------- //
 
@@ -285,7 +288,12 @@ const DEFAULT_SETTINGS = {
   profile: {
     gardenName: '',
     gardenSize: 0,
-    experienceLevel: 'beginner'
+    experienceLevel: 'beginner',
+    siteTitle: 'Akıllı Bahçe',
+    siteDescription: 'Bahçenizi dijital dünyada yönetin. Ağaçlarınızı, sebzelerinizi takip edin, bakım zamanlarını kaçırmayın.',
+    siteEmail: 'info@akillibahce.com',
+    siteWebsite: 'www.akillibahce.com',
+    siteWhatsApp: ''
   },
   ui: {
     dateFormat: 'dd.MM.yyyy',
@@ -345,7 +353,7 @@ function formatDateWithSettings(date) {
   try {
     const s = loadSettings();
     fmt = s.ui.dateFormat || fmt;
-  } catch {}
+  } catch { }
 
   const dd = String(date.getDate()).padStart(2, '0');
   const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -358,7 +366,7 @@ function formatDateWithSettings(date) {
     .replace('MMMM', monthTR)
     .replace('MM', mm)
     .replace('yyyy', yyyy);
-    
+
 }
 
 /* -------------------- LOGIN -------------------- */
@@ -473,57 +481,57 @@ function WeatherTab({ token }) {
 
   // Geniş hava durumu verisini çek
   useEffect(() => {
-  // Token yoksa hiç istek atma
-  if (!token) {
-    setData(null);
-    setError('');
-    return;
-  }
-
-  const abort = new AbortController();
-
-  const fetchExtended = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch(
-        `${API_URL}/weather/extended?city=${encodeURIComponent(city)}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: abort.signal
-        }
-      );
-
-     const json = await res.json().catch(() => ({}));
-
-// Sadece backend gerçekten token diyorsa oturum hatası göster
-if (
-  res.status === 401 &&
-  typeof json.message === 'string' &&
-  json.message.toLowerCase().includes('token')
-) {
-  setError('Oturum süren dolmuş veya token geçersiz. Lütfen tekrar giriş yap.');
-  return;
-}
-
-if (!res.ok) {
-  throw new Error(json.message || 'Hava durumu alınamadı.');
-}
-
-
-      setData(json);
-    } catch (err) {
-      if (err.name === 'AbortError') return;
-      setError(err.message || 'Hava durumu alınamadı.');
-    } finally {
-      setLoading(false);
+    // Token yoksa hiç istek atma
+    if (!token) {
+      setData(null);
+      setError('');
+      return;
     }
-  };
 
-  fetchExtended();
+    const abort = new AbortController();
 
-  return () => abort.abort();
-}, [token, city]);
+    const fetchExtended = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await fetch(
+          `${API_URL}/weather/extended?city=${encodeURIComponent(city)}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: abort.signal
+          }
+        );
+
+        const json = await res.json().catch(() => ({}));
+
+        // Sadece backend gerçekten token diyorsa oturum hatası göster
+        if (
+          res.status === 401 &&
+          typeof json.message === 'string' &&
+          json.message.toLowerCase().includes('token')
+        ) {
+          setError('Oturum süren dolmuş veya token geçersiz. Lütfen tekrar giriş yap.');
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error(json.message || 'Hava durumu alınamadı.');
+        }
+
+
+        setData(json);
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        setError(err.message || 'Hava durumu alınamadı.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExtended();
+
+    return () => abort.abort();
+  }, [token, city]);
 
 
   // Saat + tarih için
@@ -578,7 +586,7 @@ if (!res.ok) {
     if (s.ui?.timeFormat === 'hh:mm') {
       hour12 = true;
     }
-  } catch {}
+  } catch { }
 
   const dateStr = formatDateWithSettings(now);
   const timeStr = now.toLocaleTimeString('tr-TR', {
@@ -587,59 +595,59 @@ if (!res.ok) {
     hour12
   });
 
- const current = data?.current || {};
-const hourly = data?.hourly || [];
-const daily = data?.daily || [];
-const air = data?.air || null;
-const windSpeed = typeof current.wind_speed === 'number' ? current.wind_speed : null;
-const windDeg = typeof current.wind_deg === 'number' ? current.wind_deg : null;
-const windDirLabel = getWindDirectionLabel(windDeg);
+  const current = data?.current || {};
+  const hourly = data?.hourly || [];
+  const daily = data?.daily || [];
+  const air = data?.air || null;
+  const windSpeed = typeof current.wind_speed === 'number' ? current.wind_speed : null;
+  const windDeg = typeof current.wind_deg === 'number' ? current.wind_deg : null;
+  const windDirLabel = getWindDirectionLabel(windDeg);
 
-// UV verisi var mı?
-const hasUv = typeof current.uvi === 'number';
-const uvInfo = hasUv ? getUvInfo(current.uvi) : null;
+  // UV verisi var mı?
+  const hasUv = typeof current.uvi === 'number';
+  const uvInfo = hasUv ? getUvInfo(current.uvi) : null;
 
-// Hava kalitesi etiketi
-const aqiInfo = getAqiInfo(air?.aqi);
+  // Hava kalitesi etiketi
+  const aqiInfo = getAqiInfo(air?.aqi);
 
-// Hava kalitesi kartını tek yerde tanımlayalım, sonra hem solda hem sağda kullanabilelim
-const airQualityCard =
-  air && (
-    <div className="weather-aqi-card">
-      <div className="card-title-row">
-        <span className="card-title">Hava Kalitesi</span>
-        <span className={`aqi-badge ${aqiInfo.className || ''}`}>
-          AQI {air.aqi} · {aqiInfo.label}
-        </span>
+  // Hava kalitesi kartını tek yerde tanımlayalım, sonra hem solda hem sağda kullanabilelim
+  const airQualityCard =
+    air && (
+      <div className="weather-aqi-card">
+        <div className="card-title-row">
+          <span className="card-title">Hava Kalitesi</span>
+          <span className={`aqi-badge ${aqiInfo.className || ''}`}>
+            AQI {air.aqi} · {aqiInfo.label}
+          </span>
+        </div>
+        <div className="weather-aqi-grid">
+          <div className="weather-aqi-item">
+            <span className="label">PM2.5 : </span>
+            <span className="value">{air.pm2_5?.toFixed(1) ?? '—'}</span>
+          </div>
+          <div className="weather-aqi-item">
+            <span className="label">PM10 : </span>
+            <span className="value">{air.pm10?.toFixed(1) ?? '—'}</span>
+          </div>
+          <div className="weather-aqi-item">
+            <span className="label">O₃ : </span>
+            <span className="value">{air.o3?.toFixed(1) ?? '—'}</span>
+          </div>
+          <div className="weather-aqi-item">
+            <span className="label">NO₂ : </span>
+            <span className="value">{air.no2?.toFixed(1) ?? '—'}</span>
+          </div>
+          <div className="weather-aqi-item">
+            <span className="label">SO₂ : </span>
+            <span className="value">{air.so2?.toFixed(1) ?? '—'}</span>
+          </div>
+          <div className="weather-aqi-item">
+            <span className="label">CO : </span>
+            <span className="value">{air.co?.toFixed(1) ?? '—'}</span>
+          </div>
+        </div>
       </div>
-      <div className="weather-aqi-grid">
-        <div className="weather-aqi-item">
-          <span className="label">PM2.5 : </span>
-          <span className="value">{air.pm2_5?.toFixed(1) ?? '—'}</span>
-        </div>
-        <div className="weather-aqi-item">
-          <span className="label">PM10 : </span>
-          <span className="value">{air.pm10?.toFixed(1) ?? '—'}</span>
-        </div>
-        <div className="weather-aqi-item">
-          <span className="label">O₃ : </span>
-          <span className="value">{air.o3?.toFixed(1) ?? '—'}</span>
-        </div>
-        <div className="weather-aqi-item">
-          <span className="label">NO₂ : </span>
-          <span className="value">{air.no2?.toFixed(1) ?? '—'}</span>
-        </div>
-        <div className="weather-aqi-item">
-          <span className="label">SO₂ : </span>
-          <span className="value">{air.so2?.toFixed(1) ?? '—'}</span>
-        </div>
-        <div className="weather-aqi-item">
-          <span className="label">CO : </span>
-          <span className="value">{air.co?.toFixed(1) ?? '—'}</span>
-        </div>
-      </div>
-    </div>
-  );
+    );
 
 
   const sunrise = current.sunrise ? new Date(current.sunrise * 1000) : null;
@@ -712,7 +720,7 @@ const airQualityCard =
           </p>
         </div>
         <div className="weather-page-header-right">
-          
+
           <select
             className="settings-select weather-city-select"
             value={city}
@@ -744,9 +752,9 @@ const airQualityCard =
               {/* Sol taraf: sıcaklık + UV + gün doğumu/batımı */}
               <div className="weather-main-left">
                 <div className="weather-main-temp"><div className="weather-date-time">
-            <span>{dateStr} 
-             {timeStr}</span>
-          </div>
+                  <span>{dateStr}
+                    {timeStr}</span>
+                </div>
                   <div className="weather-main-temp-value">
                     {Math.round(current.temp)}°C
                   </div>
@@ -788,77 +796,77 @@ const airQualityCard =
                   )}
                 </div>
 
-           {/* UV bandı varsa göster, yoksa yerine hava kalitesini getir */}
-{hasUv && (
-  <div className="weather-main-uv">
-    <div className="uv-label-row">
-      <span>UV İndeksi</span>
-      <span className="uv-value">
-        {current.uvi.toFixed(1)}
-      </span>
-    </div>
-    <div
-      className={`uv-band ${uvInfo?.className || ''}`}
-      aria-label={uvInfo?.label}
-    >
-      <span className="uv-band-label">{uvInfo?.label}</span>
-    </div>
-  </div>
-)}
+                {/* UV bandı varsa göster, yoksa yerine hava kalitesini getir */}
+                {hasUv && (
+                  <div className="weather-main-uv">
+                    <div className="uv-label-row">
+                      <span>UV İndeksi</span>
+                      <span className="uv-value">
+                        {current.uvi.toFixed(1)}
+                      </span>
+                    </div>
+                    <div
+                      className={`uv-band ${uvInfo?.className || ''}`}
+                      aria-label={uvInfo?.label}
+                    >
+                      <span className="uv-band-label">{uvInfo?.label}</span>
+                    </div>
+                  </div>
+                )}
 
-{!hasUv && airQualityCard}
+                {!hasUv && airQualityCard}
 
               </div>
 
               {/* Sağ taraf: Rüzgar pusulası + hava kalitesi */}
               <div className="weather-main-right">
                 {/* Rüzgar */}
-              <div className="weather-wind-card">
-  <div className="card-title-row">
-    <span className="card-title">Rüzgar</span>
-    {windSpeed != null && (
-      <span className="card-sub">
-        {windSpeed.toFixed(1)} m/s
-      </span>
-    )}
-  </div>
+                <div className="weather-wind-card">
+                  <div className="card-title-row">
+                    <span className="card-title">Rüzgar</span>
+                    {windSpeed != null && (
+                      <span className="card-sub">
+                        {windSpeed.toFixed(1)} m/s
+                      </span>
+                    )}
+                  </div>
 
-  <div className="weather-compass">
-    <div className="weather-compass-circle" />
-    <div className="weather-compass-arrow-wrapper">
-      {/* OpenWeather’da wind_deg: rüzgarın GELDİĞİ yön (derece) */}
-      <div
-        className="weather-compass-arrow"
-        style={{
-          transform: `rotate(${(windDeg || 0) - 90}deg)`
-        }}
-      />
-    </div>
-    <div className="weather-compass-label n">N</div>
-    <div className="weather-compass-label e">E</div>
-    <div className="weather-compass-label s">S</div>
-    <div className="weather-compass-label w">W</div>
-  </div>
+                  <div className="weather-compass">
+                    <div className="weather-compass-circle" />
+                    <div className="weather-compass-arrow-wrapper">
+                      {/* OpenWeather’da wind_deg: rüzgarın GELDİĞİ yön (derece) */}
+                      <div
+                        className="weather-compass-arrow"
+                        style={{
+                          transform: `rotate(${(windDeg || 0) - 90}deg)`
+                        }}
+                      />
+                    </div>
+                    <div className="weather-compass-label n">N</div>
+                    <div className="weather-compass-label e">E</div>
+                    <div className="weather-compass-label s">S</div>
+                    <div className="weather-compass-label w">W</div>
+                  </div>
 
-  {/* Pusulanın altındaki yazılı bilgiler */}
-  <div className="weather-wind-info">
-    <div>
-      Yön:{' '}
-      {windDeg != null
-        ? `${windDirLabel} (${Math.round(windDeg)}°)`
-        : '—'}
-    </div>
-    <div>
-      Hız:{' '}
-      {windSpeed != null
-        ? `${windSpeed.toFixed(1)} m/s`
-        : '—'}
-    </div>
-  </div>
-</div>
+                  {/* Pusulanın altındaki yazılı bilgiler */}
+                  <div className="weather-wind-info">
+                    <div>
+                      Yön:{' '}
+                      {windDeg != null
+                        ? `${windDirLabel} (${Math.round(windDeg)}°)`
+                        : '—'}
+                    </div>
+                    <div>
+                      Hız:{' '}
+                      {windSpeed != null
+                        ? `${windSpeed.toFixed(1)} m/s`
+                        : '—'}
+                    </div>
+                  </div>
+                </div>
 
 
-               
+
               </div>
             </div>
 
@@ -893,8 +901,8 @@ const airQualityCard =
                   idx === 0
                     ? 'Bugün'
                     : idx === 1
-                    ? 'Yarın'
-                    : dayNames[date.getDay()];
+                      ? 'Yarın'
+                      : dayNames[date.getDay()];
                 return (
                   <div key={day.dt || idx} className="weather-week-day">
                     <div className="weather-week-day-name">{name}</div>
@@ -1028,50 +1036,30 @@ function WeatherWidgeth({ token }) {
 
   if (!weather) return null;
 
-  const dayNames = [
-    'Pazar',
-    'Pazartesi',
-    'Salı',
-    'Çarşamba',
-    'Perşembe',
-    'Cuma',
-    'Cumartesi'
-  ];
-
-  
-
-// Tarih formatlama fonksiyonu
 
 
-const dateStr = formatDateWithSettings(now);
 
-let hour12 = false;
-try {
-  const s = loadSettings();
-  if (s.ui?.timeFormat === 'hh:mm') {
-    hour12 = true; // 12 saat modu
-  }
-} catch (e) {
-  // varsayılan 24 saat
-}
 
-const timeStr = now.toLocaleTimeString('tr-TR', {
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12
-});
+  // Tarih formatlama fonksiyonu
+
+
+  const dateStr = formatDateWithSettings(now);
+
+
+
+
 
   return (
     <div className="weather-inline">
       <div className="weather-main-row">
         <span className="w-icon">🌤️</span>
         <span className="w-temp">{Math.round(weather.temp)}°C</span>
-        
-         
-       
+
+
+
         <span className="w-item">📍 {weather.city}</span>
         <span className="w-item">📅 {dateStr}</span>
-         
+
       </div>
     </div>
   );
@@ -1132,38 +1120,30 @@ function WeatherWidget({ token }) {
 
   if (!weather) return null;
 
-  const dayNames = [
-    'Pazar',
-    'Pazartesi',
-    'Salı',
-    'Çarşamba',
-    'Perşembe',
-    'Cuma',
-    'Cumartesi'
-  ];
-
-  
-
-// Tarih formatlama fonksiyonu
 
 
-const dateStr = formatDateWithSettings(now);
 
-let hour12 = false;
-try {
-  const s = loadSettings();
-  if (s.ui?.timeFormat === 'hh:mm') {
-    hour12 = true; // 12 saat modu
+
+  // Tarih formatlama fonksiyonu
+
+
+  const dateStr = formatDateWithSettings(now);
+
+  let hour12 = false;
+  try {
+    const s = loadSettings();
+    if (s.ui?.timeFormat === 'hh:mm') {
+      hour12 = true; // 12 saat modu
+    }
+  } catch (e) {
+    // varsayılan 24 saat
   }
-} catch (e) {
-  // varsayılan 24 saat
-}
 
-const timeStr = now.toLocaleTimeString('tr-TR', {
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12
-});
+  const timeStr = now.toLocaleTimeString('tr-TR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12
+  });
 
   return (
     <div className="weather-inline">
@@ -1253,6 +1233,28 @@ const COMMON_VEGETABLE_NAMES = [
   'Yeşil Soğan'
 ].sort();
 
+const VEGETABLE_CATEGORY_MAP = {
+  'Marul': 'yaprakli', 'Kıvırcık Marul': 'yaprakli', 'Göbek Marul': 'yaprakli', 'Ispanak': 'yaprakli', 'Pazı': 'yaprakli', 'Roka': 'yaprakli', 'Tere': 'yaprakli', 'Maydanoz': 'yaprakli', 'Dereotu': 'yaprakli', 'Nane': 'yaprakli', 'Kuzukulağı': 'yaprakli', 'Semizotu': 'yaprakli', 'Beyaz Lahana': 'yaprakli', 'Kara Lahana': 'yaprakli', 'Kırmızı Lahana': 'yaprakli', 'Brüksel Lahanası': 'yaprakli', 'Çin Lahanası': 'yaprakli',
+  'Domates': 'meyveli', 'Biber': 'meyveli', 'Çarliston Biber': 'meyveli', 'Sivri Biber': 'meyveli', 'Kapya Biber': 'meyveli', 'Patlıcan': 'meyveli', 'Bamya': 'meyveli',
+  'Havuç': 'kok', 'Patates': 'kok', 'Tatlı Patates': 'kok', 'Pancar': 'kok', 'Turp': 'kok', 'Şalgam': 'kok', 'Kereviz': 'kok', 'Yer Elması': 'kok', 'Salsifi': 'kok',
+  'Soğan': 'sogansi', 'Kuru Soğan': 'sogansi', 'Yeşil Soğan': 'sogansi', 'Sarımsak': 'sogansi', 'Pırasa': 'sogansi', 'Arpacık Soğan': 'sogansi', 'Frenk Soğanı': 'sogansi',
+  'Fasulye': 'baklagil', 'Barbunya': 'baklagil', 'Bezelye': 'baklagil', 'Bakla': 'baklagil', 'Börülce': 'baklagil', 'Nohut': 'baklagil', 'Mercimek': 'baklagil',
+  'Kabak': 'kabakgil', 'Bal Kabağı': 'kabakgil', 'Spagetti Kabağı': 'kabakgil', 'Kavun': 'kabakgil', 'Karpuz': 'kabakgil', 'Salatalık': 'kabakgil',
+  'Kuşkonmaz': 'ozel', 'Enginar': 'ozel', 'Ravent': 'ozel', 'Brokoli': 'ozel', 'Karnabahar': 'ozel', 'Rezene': 'ozel'
+};
+
+const VEGETABLE_CATEGORY_LABELS = {
+  genel: 'Genel',
+  yaprakli: 'Yapraklı',
+  kok: 'Kök Sebzeler',
+  meyveli: 'Meyveli Sebzeler',
+  kabakgil: 'Kabakgiller',
+  baklagil: 'Baklagiller',
+  sogansi: 'Soğansı Bitkiler',
+  aromatik: 'Aromatik Otlar',
+  ozel: 'Özel Sebzeler'
+};
+
 function VegetableForm({ initialVeg, onSave, onCancel, token }) {
   const [nameSelection, setNameSelection] = useState(''); // Dropdown seçimi
   const [customName, setCustomName] = useState(''); // Özel isim girişi
@@ -1317,14 +1319,22 @@ function VegetableForm({ initialVeg, onSave, onCancel, token }) {
   }, [initialVeg]);
 
   // nameSelection veya customName değiştiğinde name'i güncelle
+  // AYRICA: Kategori otomatik seçilsin
   useEffect(() => {
+    let newName = '';
     if (nameSelection === 'Özel') {
-      setName(customName);
+      newName = customName;
     } else if (nameSelection) {
-      setName(nameSelection);
+      newName = nameSelection;
+    }
+    setName(newName);
+
+    // Otomatik Kategori Seçimi (Sadece yeni eklemede veya kullanıcı değiştirmediyse mantıklı ama burada her isim değişiminde zorlayabiliriz)
+    if (newName && VEGETABLE_CATEGORY_MAP[newName]) {
+      setCategory(VEGETABLE_CATEGORY_MAP[newName]);
     }
   }, [nameSelection, customName]);
-  
+
   const handleRemoveImage = async () => {
     // Yeni eklenen (daha kaydedilmemiş) sebzede sadece local bilgiyi sil
     if (!initialVeg?._id) {
@@ -1469,7 +1479,7 @@ function VegetableForm({ initialVeg, onSave, onCancel, token }) {
           onChange={(e) => setCount(e.target.value)}
         />
       </label>
- <label>
+      <label>
         Sebze Kategorisi
         <select
           value={category}
@@ -1496,43 +1506,43 @@ function VegetableForm({ initialVeg, onSave, onCancel, token }) {
         />
       </label>
 
-   <label>
-  Resim Seç
-  <input
-    type="file"
-    accept="image/*"
-    onChange={(e) => setImageFile(e.target.files[0])}
-  />
-  <small className="help-text">
-    Maksimum 1 MB, tercihen 1200x900 piksel ve JPEG / PNG / WEBP formatında resim yükle.
-  </small>
-</label>
+      <label>
+        Resim Seç
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setImageFile(e.target.files[0])}
+        />
+        <small className="help-text">
+          Maksimum 1 MB, tercihen 1200x900 piksel ve JPEG / PNG / WEBP formatında resim yükle.
+        </small>
+      </label>
 
-{imageUrl && (
-  <div className="form-image-preview">
-    <img
-      src={`${BASE_URL}${imageUrl}`}
-      alt="Önizleme"
-      loading="lazy"
-       onError={(e) => {
-        e.target.src = `${BASE_URL}/uploads/noimage.png`;
-      }}
-    />
-    {/* 🆕 Sebze resmi sil butonu */}
-    <button
-      type="button"
-      className="btn"
-      style={{ marginTop: '4px' }}
-      onClick={handleRemoveImage}
-    >
-      Resmi Sil
-    </button>
-  </div>
-)}
+      {imageUrl && (
+        <div className="form-image-preview">
+          <img
+            src={`${BASE_URL}${imageUrl}`}
+            alt="Önizleme"
+            loading="lazy"
+            onError={(e) => {
+              e.target.src = `${BASE_URL}/uploads/noimage.png`;
+            }}
+          />
+          {/* 🆕 Sebze resmi sil butonu */}
+          <button
+            type="button"
+            className="btn"
+            style={{ marginTop: '4px' }}
+            onClick={handleRemoveImage}
+          >
+            Resmi Sil
+          </button>
+        </div>
+      )}
 
 
 
- 
+
 
       <div className="form-actions" style={{ justifyContent: 'flex-start' }}>
         <button
@@ -1577,20 +1587,49 @@ function VegetableForm({ initialVeg, onSave, onCancel, token }) {
 
 // Yaygın ağaç ve sebze isimleri listesi
 const COMMON_TREE_NAMES = [
-  'Ahududu', 'Akçaağaç', 'Alıç', 'Altıntop', 'Antep Fıstığı',
+  'Ahududu', 'Akçaağaç', 'Alıç', 'Altıntop', 'Antep Fıstığı', 'Ardıç',
   'Armut', 'Avokado', 'Ayva', 'Badem', 'Bektaşi Üzümü',
   'Bergamot', 'Beyaz Dut', 'Böğürtlen', 'Ceviz', 'Çam',
   'Elma', 'Erik', 'Fındık', 'Gavur Narı', 'Greyfurt',
-  'Guava', 'Ihlamur', 'İncir', 'Japon Gülü (Sakura)', 'Kan Portakalı',
-  'Kara Dut', 'Karambola', 'Karayemiş', 'Kayısı', 'Keçiboynuzu',
+  'Guava', 'Günlük Ağacı', 'Ihlamur', 'İncir', 'Japon Gülü (Sakura)', 'Kan Portakalı',
+  'Kara Dut', 'Karabiber', 'Karambola', 'Karayemiş', 'Kayısı', 'Keçiboynuzu',
   'Kestane', 'Kiraz', 'Kızılcık', 'Kumkuat', 'Ladin',
   'Limon', 'Liçi', 'Mandalina', 'Mango', 'Meşe',
   'Muşmula', 'Muz', 'Napolyon Kirazı', 'Nar', 'Nektarin',
   'Papaya', 'Pekan Cevizi', 'Pitaya', 'Portakal', 'Rambutan',
   'Sakız Ağacı', 'Sedir', 'Servi', 'Sumak', 'Şeftali',
   'Trabzon Hurması', 'Turunç', 'Üzüm Asması', 'Vişne', 'Yabani Elma',
-  'Yaban Mersini', 'Yenidünya', 'Zeytin'
+  'Yaban Mersini', 'Yenibahar', 'Yenidünya', 'Zeytin'
 ].sort();
+
+const TREE_CATEGORY_MAP = {
+  'Elma': 'meyve', 'Armut': 'meyve', 'Kiraz': 'meyve', 'Şeftali': 'meyve', 'Zeytin': 'meyve', 'Nar': 'meyve', 'Ayva': 'meyve', 'Kayısı': 'meyve', 'Vişne': 'meyve', 'Erik': 'meyve', 'İncir': 'meyve', 'Trabzon Hurması': 'meyve', 'Nektarin': 'meyve', 'Üzüm Asması': 'meyve', 'Napolyon Kirazı': 'meyve',
+  'Portakal': 'narenciye', 'Mandalina': 'narenciye', 'Limon': 'narenciye', 'Greyfurt': 'narenciye', 'Turunç': 'narenciye', 'Bergamot': 'narenciye', 'Kumkuat': 'narenciye', 'Kamkat': 'narenciye', 'Altıntop': 'narenciye', 'Kan Portakalı': 'narenciye',
+  'Ceviz': 'sert-kabuklu', 'Fındık': 'sert-kabuklu', 'Badem': 'sert-kabuklu', 'Kestane': 'sert-kabuklu', 'Antep Fıstığı': 'sert-kabuklu', 'Pekan Cevizi': 'sert-kabuklu',
+  'Çam': 'igne-yaprakli', 'Sedir': 'igne-yaprakli', 'Ladin': 'igne-yaprakli', 'Servi': 'igne-yaprakli',
+  'Akçaağaç': 'sus-agaci', 'Meşe': 'sus-agaci', 'Japon Gülü (Sakura)': 'sus-agaci', 'Erguvan': 'sus-agaci', 'Manolya': 'sus-agaci', 'Çınar': 'sus-agaci',
+  'Ihlamur': 'tibbi-aromatik', 'Sığla': 'tibbi-aromatik', 'Sakız Ağacı': 'tibbi-aromatik', 'Sumak': 'tibbi-aromatik', 'Defne': 'tibbi-aromatik', 'Okaliptüs': 'tibbi-aromatik',
+  'Ahududu': 'yumusak-meyveli', 'Böğürtlen': 'yumusak-meyveli', 'Bektaşi Üzümü': 'yumusak-meyveli', 'Karadut': 'yumusak-meyveli', 'Dut': 'yumusak-meyveli', 'Beyaz Dut': 'yumusak-meyveli', 'Kara Dut': 'yumusak-meyveli',
+  'Avokado': 'tropik', 'Mango': 'tropik', 'Muz': 'tropik', 'Papaya': 'tropik', 'Liçi': 'tropik', 'Ananas': 'tropik', 'Ejder Meyvesi': 'tropik', 'Pitaya': 'tropik', 'Guava': 'tropik', 'Yenidünya': 'tropik', 'Rambutan': 'tropik', 'Karambola': 'tropik', 'Gavur Narı': 'tropik',
+  'Kızılcık': 'yabani-meyve', 'Alıç': 'yabani-meyve', 'Muşmula': 'yabani-meyve', 'İğde': 'yabani-meyve', 'Yabani Elma': 'yabani-meyve', 'Ahlat': 'yabani-meyve', 'Karayemiş': 'yabani-meyve', 'Yaban Mersini': 'yabani-meyve', 'Keçiboynuzu': 'yabani-meyve',
+  'Ardıç': 'reçineli', 'Günlük Ağacı': 'reçineli',
+  'Yenibahar': 'baharat', 'Karabiber': 'baharat'
+};
+
+const TREE_CATEGORY_LABELS = {
+  genel: 'Genel',
+  meyve: 'Meyve Ağaçları',
+  narenciye: 'Narenciye',
+  tropik: 'Tropik Meyveler',
+  'sert-kabuklu': 'Sert Kabuklu Meyveler',
+  'sus-agaci': 'Süs Ağaçları',
+  'igne-yaprakli': 'İğne Yapraklı',
+  'yumusak-meyveli': 'Yumuşak Meyveli',
+  'yabani-meyve': 'Yabani Meyveler',
+  'tibbi-aromatik': 'Tıbbi ve Aromatik',
+  'reçineli': 'Reçineli',
+  'baharat': 'Baharat'
+};
 
 function TreeForm({ initialTree, onSave, onCancel, token }) {
   const [nameSelection, setNameSelection] = useState(''); // Dropdown seçimi
@@ -1618,7 +1657,7 @@ function TreeForm({ initialTree, onSave, onCancel, token }) {
 
 
 
-    useEffect(() => {
+  useEffect(() => {
     if (initialTree) {
       const treeName = initialTree.name || '';
       setName(treeName);
@@ -1665,11 +1704,19 @@ function TreeForm({ initialTree, onSave, onCancel, token }) {
   }, [initialTree]);
 
   // nameSelection veya customName değiştiğinde name'i güncelle
+  // AYRICA: Kategori otomatik seçilsin
   useEffect(() => {
+    let newName = '';
     if (nameSelection === 'Özel') {
-      setName(customName);
+      newName = customName;
     } else if (nameSelection) {
-      setName(nameSelection);
+      newName = nameSelection;
+    }
+    setName(newName);
+
+    // Otomatik Kategori Seçimi
+    if (newName && TREE_CATEGORY_MAP[newName]) {
+      setCategory(TREE_CATEGORY_MAP[newName]);
     }
   }, [nameSelection, customName]);
 
@@ -1771,12 +1818,29 @@ function TreeForm({ initialTree, onSave, onCancel, token }) {
 
       <label>
         Adet
-        <input
-          type="number"
-          min="0"
-          value={count}
-          onChange={(e) => setCount(e.target.value)}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <button
+            type="button"
+            onClick={() => setCount(Math.max(0, parseInt(count || 0) - 1))}
+            style={{ padding: '5px 10px', cursor: 'pointer', background: '#f8f9fa', border: '1px solid #ddd', borderRadius: '4px' }}
+          >
+            -
+          </button>
+          <input
+            type="number"
+            min="0"
+            value={count}
+            onChange={(e) => setCount(e.target.value)}
+            style={{ width: '60px', textAlign: 'center' }}
+          />
+          <button
+            type="button"
+            onClick={() => setCount(parseInt(count || 0) + 1)}
+            style={{ padding: '5px 10px', cursor: 'pointer', background: '#f8f9fa', border: '1px solid #ddd', borderRadius: '4px' }}
+          >
+            +
+          </button>
+        </div>
       </label>
       <label>
         Ağaç Kategorisi
@@ -1792,9 +1856,10 @@ function TreeForm({ initialTree, onSave, onCancel, token }) {
           <option value="sus-agaci">Süs Ağaçları (Akçaağaç, Meşe, Ihlamur, Sakura...)</option>
           <option value="igne-yaprakli">İğne Yapraklı (Çam, Sedir, Ladin, Servi...)</option>
           <option value="yumusak-meyveli">Yumuşak Meyveli (Ahududu, Böğürtlen, Bektaşi Üzümü...)</option>
-          <option value="yabani-meyve">Yabani Meyveler (Yabani Elma, Yaban Mersini...)</option>
-          <option value="reçineli">Reçineli (Sakız Ağacı...)</option>
-          <option value="baharat">Baharat (Sumak...)</option>
+          <option value="yabani-meyve">Yabani Meyveler (Yabani Elma, Yaban Mersini, Keçiboynuzu...)</option>
+          <option value="tibbi-aromatik">Tıbbi ve Aromatik (Sakız Ağacı, Ihlamur, Sığla, Sumak...)</option>
+          <option value="reçineli">Reçineli (Ardıç, Günlük Ağacı...)</option>
+          <option value="baharat">Baharat (Yenibahar, Karabiber...)</option>
         </select>
       </label>
 
@@ -1809,30 +1874,30 @@ function TreeForm({ initialTree, onSave, onCancel, token }) {
       </label>
 
       <label>
-  Resim Seç
-  <input
-    type="file"
-    accept="image/*"
-    onChange={(e) => setImageFile(e.target.files[0])}
-  />
-  <small className="help-text">
-    Maksimum 1 MB, tercihen 1200x900 piksel ve JPEG / PNG / WEBP formatında resim yükle.
-  </small>
-</label>
+        Resim Seç
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setImageFile(e.target.files[0])}
+        />
+        <small className="help-text">
+          Maksimum 1 MB, tercihen 1200x900 piksel ve JPEG / PNG / WEBP formatında resim yükle.
+        </small>
+      </label>
 
 
       {imageUrl && (
-  <div className="form-image-preview">
-    <img
-      src={`${BASE_URL}${imageUrl}`}
-      alt="Önizleme"
-      loading="lazy"
-      onError={(e) => {
-        e.target.src = `${BASE_URL}/uploads/noimage.jpg`;
-      }}
-    />
-  </div>
-)}
+        <div className="form-image-preview">
+          <img
+            src={`${BASE_URL}${imageUrl}`}
+            alt="Önizleme"
+            loading="lazy"
+            onError={(e) => {
+              e.target.src = `${BASE_URL}/uploads/noimage.jpg`;
+            }}
+          />
+        </div>
+      )}
 
       {imageUrl && (
         <button
@@ -1919,7 +1984,9 @@ function VegetableManager({ token }) {
 
   // Filtreleme ve sıralama state'leri
   const [sortBy, setSortBy] = useState('name-asc');
+
   const [filterCategory, setFilterCategory] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Görünüm modunu al
   const [viewMode, setViewMode] = useState('card');
@@ -1936,7 +2003,7 @@ function VegetableManager({ token }) {
     return () => window.removeEventListener('sg-settings-changed', handleSettingsChange);
   }, []);
 
-  const fetchVeggies = async () => {
+  const fetchVeggies = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -1953,11 +2020,11 @@ function VegetableManager({ token }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     fetchVeggies();
-  }, [token]);
+  }, [fetchVeggies]);
 
   const handleCreate = () => {
     setEditingVeg(null);
@@ -1987,6 +2054,36 @@ function VegetableManager({ token }) {
       setSelectedVeg(null);
     } catch (err) {
       alert(err.message);
+    }
+  };
+
+  const handleQuickUpdate = async (veg, newCount) => {
+    try {
+      const url = `${API_URL}/vegetables/${veg._id}`;
+      const updatedData = { ...veg, count: newCount };
+
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedData)
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Güncelleme başarısız');
+
+      setVeggies((prev) =>
+        prev.map((v) => (v._id === data._id ? data : v))
+      );
+
+      // Modal açıksa selectedVeg'i de güncelle (anlık değişim için)
+      if (selectedVeg && selectedVeg._id === data._id) {
+        setSelectedVeg(data);
+      }
+    } catch (err) {
+      console.error('Quick update error:', err);
     }
   };
 
@@ -2051,8 +2148,16 @@ function VegetableManager({ token }) {
     let filtered = [...veggies];
 
     // Kategori filtresi
+    // Kategori filtresi
     if (filterCategory !== 'all') {
       filtered = filtered.filter((v) => v.category === filterCategory);
+    }
+
+    // Arama filtresi
+    if (searchTerm) {
+      filtered = filtered.filter((v) =>
+        v.name.toLocaleLowerCase('tr').includes(searchTerm.toLocaleLowerCase('tr'))
+      );
     }
 
     // Sıralama
@@ -2114,8 +2219,7 @@ function VegetableManager({ token }) {
         return;
       }
 
-      const updatedVeg = data.vegetable || data;
-
+      const updatedVeg = data.vegetable || {};
       setVeggies((prev) =>
         prev.map((v) => (v._id === updatedVeg._id ? updatedVeg : v))
       );
@@ -2137,21 +2241,31 @@ function VegetableManager({ token }) {
         <h2>Sebzeler</h2>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+          <label style={{ fontWeight: 'bold' }}>Ara:</label>
+          <input
+            type="text"
+            placeholder="İsim ara..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="settings-select"
+            style={{ width: '120px' }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
           <label style={{ fontWeight: 'bold' }}>Kategori:</label>
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            class="settings-select" >
+            className="settings-select"
+          >
             <option value="all">Tümü</option>
-            <option value="genel">Genel</option>
-            <option value="yaprakli">Yapraklı</option>
-            <option value="kok">Kök Sebzeler</option>
-            <option value="meyveli">Meyveli Sebzeler</option>
-            <option value="kabakgil">Kabakgiller</option>
-            <option value="baklagil">Baklagiller</option>
-            <option value="sogansi">Soğansı Bitkiler</option>
-            <option value="aromatik">Aromatik Otlar</option>
-            <option value="ozel">Özel Sebzeler</option>
+            {Object.entries(VEGETABLE_CATEGORY_LABELS)
+              .filter(([key]) => veggies.some(v => v.category === key))
+              .map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))
+            }
           </select>
         </div>
 
@@ -2202,16 +2316,15 @@ function VegetableManager({ token }) {
             >
               <div className="tree-card-image-wrapper">
                 <img
-  src={`${BASE_URL}${
-    veg.imageUrl || '/uploads/noimage.png'
-  }`}
-  alt={veg.name}
-  className="tree-card-image"
-  loading="lazy"
-  onError={(e) => {
-    e.target.src = `${BASE_URL}/uploads/noimage.png`;
-  }}
-/>
+                  src={`${BASE_URL}${veg.imageUrl || '/uploads/noimage.png'
+                    }`}
+                  alt={veg.name}
+                  className="tree-card-image"
+                  loading="lazy"
+                  onError={(e) => {
+                    e.target.src = `${BASE_URL}/uploads/noimage.png`;
+                  }}
+                />
               </div>
 
               <div className={viewMode === 'list' ? 'tree-card-body tree-card-body-list' : 'tree-card-body'}>
@@ -2243,17 +2356,17 @@ function VegetableManager({ token }) {
                 <div className="tree-card-meta-row">
                   <span className="tree-chip">Adet: {veg.count}</span>
 
-                    <span className="tree-chip">
-    {veg.category === 'yaprakli'
-      ? 'Yapraklı'
-      : veg.category === 'kök'
-      ? 'Kök Sebze'
-      : veg.category === 'meyve'
-      ? 'Meyve Sebze'
-      : veg.category === 'baklagil'
-      ? 'Baklagil'
-      : 'Genel'}
-  </span>
+                  <span className="tree-chip">
+                    {veg.category === 'yaprakli'
+                      ? 'Yapraklı'
+                      : veg.category === 'kök'
+                        ? 'Kök Sebze'
+                        : veg.category === 'meyve'
+                          ? 'Meyve Sebze'
+                          : veg.category === 'baklagil'
+                            ? 'Baklagil'
+                            : 'Genel'}
+                  </span>
 
                 </div>
 
@@ -2302,10 +2415,43 @@ function VegetableManager({ token }) {
         <div className="modal-overlay" onClick={closeDetail}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2>{selectedVeg.name}</h2>
-            <p>
-              <strong>Adet:</strong> {selectedVeg.count}
+            <p style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <strong>Adet:</strong>
+              <button
+                onClick={() => {
+                  const newCount = Math.max(0, (selectedVeg.count || 0) - 1);
+                  handleQuickUpdate(selectedVeg, newCount);
+                }}
+                style={{
+                  padding: '5px 10px',
+                  cursor: 'pointer',
+                  border: '1px solid #ddd',
+                  background: '#f8f9fa',
+                  borderRadius: '4px'
+                }}
+              >
+                -
+              </button>
+              <span style={{ fontWeight: 'bold', minWidth: '30px', textAlign: 'center' }}>
+                {selectedVeg.count}
+              </span>
+              <button
+                onClick={() => {
+                  const newCount = (selectedVeg.count || 0) + 1;
+                  handleQuickUpdate(selectedVeg, newCount);
+                }}
+                style={{
+                  padding: '5px 10px',
+                  cursor: 'pointer',
+                  border: '1px solid #ddd',
+                  background: '#f8f9fa',
+                  borderRadius: '4px'
+                }}
+              >
+                +
+              </button>
             </p>
-<p>
+            <p>
               <strong>Kategori:</strong>{' '}
               {selectedVeg.category || 'Genel'}
             </p>
@@ -2344,7 +2490,7 @@ function VegetableManager({ token }) {
 
             <h3>Aylık Bakım Planı</h3>
             {selectedVeg.maintenance &&
-            selectedVeg.maintenance.length > 0 ? (
+              selectedVeg.maintenance.length > 0 ? (
               <div className="maintenance-table-wrapper">
                 <table className="maintenance-table">
                   <thead>
@@ -2463,7 +2609,9 @@ function TreeManager({ token }) {
 
   // Filtreleme ve sıralama state'leri
   const [sortBy, setSortBy] = useState('name-asc');
+
   const [filterCategory, setFilterCategory] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Görünüm modunu al
   const [viewMode, setViewMode] = useState('card');
@@ -2480,7 +2628,7 @@ function TreeManager({ token }) {
     return () => window.removeEventListener('sg-settings-changed', handleSettingsChange);
   }, []);
 
-  const fetchTrees = async () => {
+  const fetchTrees = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -2497,11 +2645,11 @@ function TreeManager({ token }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     fetchTrees();
-  }, [token]);
+  }, [fetchTrees]);
 
   const handleCreate = () => {
     setEditingTree(null);
@@ -2575,6 +2723,40 @@ function TreeManager({ token }) {
     }
   };
 
+  const handleQuickUpdate = async (tree, newCount) => {
+    try {
+      const url = `${API_URL}/trees/${tree._id}`;
+      // Sadece count değişikliği için tüm objeyi göndermek yerine,
+      // backend PUT tüm objeyi bekliyorsa mevcut tree ile merge edip yolluyoruz.
+      // EĞER backend PATCH destekliyorsa daha iyi olurdu ama şimdilik PUT.
+      const updatedData = { ...tree, count: newCount };
+
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedData)
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Güncelleme başarısız');
+
+      setTrees((prev) =>
+        prev.map((t) => (t._id === data._id ? data : t))
+      );
+
+      // Modal açıksa selectedTree'yi de güncelle (anlık değişim için)
+      if (selectedTree && selectedTree._id === data._id) {
+        setSelectedTree(data);
+      }
+    } catch (err) {
+      console.error('Quick update error:', err);
+      // Hata durumunda kullanıcıya bildirim yapılabilir
+    }
+  };
+
   const handleSave = async (treeData) => {
     try {
       let url = `${API_URL}/trees`;
@@ -2636,8 +2818,16 @@ function TreeManager({ token }) {
     let filtered = [...trees];
 
     // Kategori filtresi
+    // Kategori filtresi
     if (filterCategory !== 'all') {
       filtered = filtered.filter((t) => t.category === filterCategory);
+    }
+
+    // Arama filtresi
+    if (searchTerm) {
+      filtered = filtered.filter((t) =>
+        t.name.toLocaleLowerCase('tr').includes(searchTerm.toLocaleLowerCase('tr'))
+      );
     }
 
     // Sıralama
@@ -2677,23 +2867,31 @@ function TreeManager({ token }) {
         <h2>Ağaçlar</h2>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+          <label style={{ fontWeight: 'bold' }}>Ara:</label>
+          <input
+            type="text"
+            placeholder="İsim ara..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="settings-select"
+            style={{ width: '120px' }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
           <label style={{ fontWeight: 'bold' }}>Kategori:</label>
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            class="settings-select"  >
+            className="settings-select"
+          >
             <option value="all">Tümü</option>
-            <option value="genel">Genel</option>
-            <option value="meyve">Meyve Ağaçları</option>
-            <option value="narenciye">Narenciye</option>
-            <option value="tropik">Tropik Meyveler</option>
-            <option value="sert-kabuklu">Sert Kabuklu Meyveler</option>
-            <option value="sus-agaci">Süs Ağaçları</option>
-            <option value="igne-yaprakli">İğne Yapraklı</option>
-            <option value="yumusak-meyveli">Yumuşak Meyveli</option>
-            <option value="yabani-meyve">Yabani Meyveler</option>
-            <option value="recineli">Reçineli</option>
-            <option value="baharat">Baharat</option>
+            {Object.entries(TREE_CATEGORY_LABELS)
+              .filter(([key]) => trees.some(t => t.category === key))
+              .map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))
+            }
           </select>
         </div>
 
@@ -2742,17 +2940,16 @@ function TreeManager({ token }) {
               style={{ opacity: isZeroCount ? 0.5 : 1 }}
             >
               <div className="tree-card-image-wrapper">
-             <img
-  src={`${BASE_URL}${
-    tree.imageUrl || '/uploads/noimage.jpg'
-  }`}
-  alt={tree.name}
-  className="tree-card-image"
-  loading="lazy"
-  onError={(e) => {
-    e.target.src = `${BASE_URL}/uploads/noimage.jpg`;
-  }}
-/>
+                <img
+                  src={`${BASE_URL}${tree.imageUrl || '/uploads/noimage.jpg'
+                    }`}
+                  alt={tree.name}
+                  className="tree-card-image"
+                  loading="lazy"
+                  onError={(e) => {
+                    e.target.src = `${BASE_URL}/uploads/noimage.jpg`;
+                  }}
+                />
               </div>
 
               <div className={viewMode === 'list' ? 'tree-card-body tree-card-body-list' : 'tree-card-body'}>
@@ -2786,16 +2983,16 @@ function TreeManager({ token }) {
                   <span className="tree-chip">
 
 
-    {tree.category === 'meyve'
-      ? 'Meyve Ağacı'
-      : tree.category === 'sus'
-      ? 'Süs Ağacı'
-      : tree.category === 'igne-yaprakli'
-      ? 'İğne Yapraklı'
-      : tree.category === 'diger'
-      ? 'Diğer'
-      : 'Genel'}
-  </span>
+                    {tree.category === 'meyve'
+                      ? 'Meyve Ağacı'
+                      : tree.category === 'sus'
+                        ? 'Süs Ağacı'
+                        : tree.category === 'igne-yaprakli'
+                          ? 'İğne Yapraklı'
+                          : tree.category === 'diger'
+                            ? 'Diğer'
+                            : 'Genel'}
+                  </span>
 
                 </div>
 
@@ -2844,10 +3041,43 @@ function TreeManager({ token }) {
         <div className="modal-overlay" onClick={closeDetail}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2>{selectedTree.name}</h2>
-            <p>
-              <strong>Adet:</strong> {selectedTree.count}
+            <p style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <strong>Adet:</strong>
+              <button
+                onClick={() => {
+                  const newCount = Math.max(0, (selectedTree.count || 0) - 1);
+                  handleQuickUpdate(selectedTree, newCount);
+                }}
+                style={{
+                  padding: '5px 10px',
+                  cursor: 'pointer',
+                  border: '1px solid #ddd',
+                  background: '#f8f9fa',
+                  borderRadius: '4px'
+                }}
+              >
+                -
+              </button>
+              <span style={{ fontWeight: 'bold', minWidth: '30px', textAlign: 'center' }}>
+                {selectedTree.count}
+              </span>
+              <button
+                onClick={() => {
+                  const newCount = (selectedTree.count || 0) + 1;
+                  handleQuickUpdate(selectedTree, newCount);
+                }}
+                style={{
+                  padding: '5px 10px',
+                  cursor: 'pointer',
+                  border: '1px solid #ddd',
+                  background: '#f8f9fa',
+                  borderRadius: '4px'
+                }}
+              >
+                +
+              </button>
             </p>
-<p>
+            <p>
               <strong>Kategori:</strong>{' '}
               {selectedTree.category || 'Genel'}
             </p>
@@ -2886,7 +3116,7 @@ function TreeManager({ token }) {
 
             <h3>Aylık Bakım Planı</h3>
             {selectedTree.maintenance &&
-            selectedTree.maintenance.length > 0 ? (
+              selectedTree.maintenance.length > 0 ? (
               <div className="maintenance-table-wrapper">
                 <table className="maintenance-table">
                   <thead>
@@ -3029,6 +3259,15 @@ function Reminders({ token, month, onChangeMonth }) {
   const [treeComboSending, setTreeComboSending] = useState(false);
   const [vegComboSending, setVegComboSending] = useState(false);
 
+  // GEÇMİŞ (HISTORY) STATE
+  const [historyData, setHistoryData] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(false); // Varsayılan kapalı
+
+  // Bildirim kutuları görünürlüğü
+  const [treeNotifyVisible, setTreeNotifyVisible] = useState(false);
+  const [vegNotifyVisible, setVegNotifyVisible] = useState(false);
+
   const [suggestionUpdatingId, setSuggestionUpdatingId] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
@@ -3042,8 +3281,8 @@ function Reminders({ token, month, onChangeMonth }) {
     }
   }); // 🆕
 
-  
-    const fetchSuggestions = async () => {
+
+  const fetchSuggestions = useCallback(async () => {
     setSuggestionsLoading(true);
     setSuggestionsError('');
     try {
@@ -3059,20 +3298,20 @@ function Reminders({ token, month, onChangeMonth }) {
         throw new Error(data.message || 'Öneriler alınamadı.');
       }
 
-     setSuggestions(data.items || []);
-      setSuggestionsVisible(true); // 🆕 getirince otomatik göster
+      setSuggestions(data.items || []);
+      setSuggestionsVisible(true);
     } catch (err) {
       setSuggestionsError(err.message || 'Öneriler alınırken hata oluştu.');
     } finally {
       setSuggestionsLoading(false);
     }
-  };
+  }, [month, token]);
 
-  
-  
-  
-  
-  const fetchTreeReminders = async (m) => {
+
+
+
+
+  const fetchTreeReminders = useCallback(async (m) => {
     setTreeLoading(true);
     setTreeError('');
     try {
@@ -3089,9 +3328,9 @@ function Reminders({ token, month, onChangeMonth }) {
     } finally {
       setTreeLoading(false);
     }
-  };
+  }, [token]);
 
-  const fetchVegReminders = async (m) => {
+  const fetchVegReminders = useCallback(async (m) => {
     setVegLoading(true);
     setVegError('');
     try {
@@ -3108,11 +3347,129 @@ function Reminders({ token, month, onChangeMonth }) {
     } finally {
       setVegLoading(false);
     }
+  }, [token]);
+
+  // GEÇMİŞ GETİR
+  const fetchHistory = useCallback(async (m) => {
+    setHistoryLoading(true);
+    console.log(`[DEBUG] Fetching history for month: ${m}`);
+    try {
+      const res = await fetch(`${API_URL}/reminders/history/${m}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log(`[DEBUG] History response status: ${res.status}`);
+      const data = await res.json().catch(() => ({}));
+      console.log(`[DEBUG] History data:`, data);
+
+      if (res.ok && data.history) {
+        setHistoryData(data.history);
+      }
+    } catch (err) {
+      console.error('Geçmiş hatası:', err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [token]);
+
+  // GEÇMİŞ: TÜM AĞAÇLARI GERİ AL
+  const handleUndoAllTrees = async () => {
+    // Sadece 'tree' olanları filtrele
+    const treesToUndo = historyData.filter((item) => item.type === 'tree');
+    if (treesToUndo.length === 0) return;
+
+    if (!window.confirm(`${monthNames[month - 1]} ayı geçmişinden TÜM AĞAÇLARI geri almak istiyor musunuz?`)) {
+      return;
+    }
+
+    setHistoryLoading(true);
+    try {
+      // Paralel olarak toggle et
+      await Promise.all(
+        treesToUndo.map(item =>
+          fetch(`${API_URL}/trees/${item.id}/maintenance/${month}/toggle`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        )
+      );
+      // Listeleri yenile
+      await fetchHistory(month);
+      fetchTreeReminders(month);
+    } catch (err) {
+      console.error('Tümünü geri al (tree) hatası:', err);
+      alert('İşlem sırasında hata oluştu.');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // GEÇMİŞ: TÜM SEBZELERİ GERİ AL
+  const handleUndoAllVeggies = async () => {
+    // Sadece 'vegetable' olanları filtrele
+    const vegToUndo = historyData.filter((item) => item.type === 'vegetable');
+    if (vegToUndo.length === 0) return;
+
+    if (!window.confirm(`${monthNames[month - 1]} ayı geçmişinden TÜM SEBZELERİ geri almak istiyor musunuz?`)) {
+      return;
+    }
+
+    setHistoryLoading(true);
+    try {
+      // Paralel olarak toggle et
+      await Promise.all(
+        vegToUndo.map(item =>
+          fetch(`${API_URL}/vegetables/${item.id}/maintenance/${month}/toggle`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        )
+      );
+      // Listeleri yenile
+      await fetchHistory(month);
+      fetchVegReminders(month);
+    } catch (err) {
+      console.error('Tümünü geri al (veg) hatası:', err);
+      alert('İşlem sırasında hata oluştu.');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // GEÇMİŞ TOGGLE (Tamamlanmadı işaretle)
+  const handleHistoryToggle = async (item) => {
+    const endpoint = item.type === 'tree' ? 'trees' : 'vegetables';
+    const id = item.id;
+
+    if (!window.confirm(`${item.name} için bu görevi "Tamamlanmadı" olarak geri almak istiyor musun?`)) {
+      return;
+    }
+
+    try {
+      await fetch(`${API_URL}/${endpoint}/${id}/maintenance/${month}/toggle`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      });
+      // Listeleri yenile
+      await fetchHistory(month);
+      fetchTreeReminders(month);
+      fetchVegReminders(month);
+    } catch (err) {
+      console.error('History toggle hatası:', err);
+      alert('İşlem başarısız.');
+    }
   };
 
   useEffect(() => {
     fetchTreeReminders(month);
     fetchVegReminders(month);
+
+    // Geçmiş görünürse onu da çek
+    if (historyVisible) {
+      fetchHistory(month);
+    }
 
     // Ayarlar: otomatik bakım önerisi paneli açıksa, önerileri de getir
     try {
@@ -3124,7 +3481,7 @@ function Reminders({ token, month, onChangeMonth }) {
     } catch (e) {
       // sessiz geç
     }
-  }, [month, token]);
+  }, [month, historyVisible, fetchTreeReminders, fetchVegReminders, fetchHistory, fetchSuggestions]);
   const sendTreeCombinedReminders = async () => {
     setTreeComboSending(true);
     // Eski mesajları temizleyelim ki yeni sonuç net görünsün
@@ -3182,7 +3539,7 @@ function Reminders({ token, month, onChangeMonth }) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-         body: JSON.stringify({ month, onlyImportant: treeOnlyImportant })
+        body: JSON.stringify({ month, onlyImportant: treeOnlyImportant })
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -3340,57 +3697,59 @@ function Reminders({ token, month, onChangeMonth }) {
         return;
       }
       fetchTreeReminders(month);
+      if (historyVisible) fetchHistory(month);
     } catch (err) {
       console.error('Ağaç kart tamamla hatası:', err);
       alert('Sunucu hatası.');
     }
   };
-const handleSuggestionComplete = async (s) => {
-  const confirmText = `"${s.name}" için ${s.month}. ay görevi tamamlandı olarak işaretlensin mi?`;
-  if (!window.confirm(confirmText)) return;
+  const handleSuggestionComplete = async (s) => {
+    const confirmText = `"${s.name}" için ${s.month}. ay görevi tamamlandı olarak işaretlensin mi?`;
+    if (!window.confirm(confirmText)) return;
 
-  setSuggestionUpdatingId(s.id);
-  try {
-    if (s.kind === 'tree' && s.treeId) {
-      const res = await fetch(
-        `${API_URL}/trees/${s.treeId}/maintenance/${s.month}/toggle`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
+    setSuggestionUpdatingId(s.id);
+    try {
+      if (s.kind === 'tree' && s.treeId) {
+        const res = await fetch(
+          `${API_URL}/trees/${s.treeId}/maintenance/${s.month}/toggle`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            }
           }
-        }
-      );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || 'Ağaç bakımı güncellenemedi.');
-      // ilgili hatırlatma listelerini tazele
-      await fetchTreeReminders(month);
-    } else if (s.kind === 'vegetable' && s.vegetableId) {
-      const res = await fetch(
-        `${API_URL}/vegetables/${s.vegetableId}/maintenance/${s.month}/toggle`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || 'Ağaç bakımı güncellenemedi.');
+        // ilgili hatırlatma listelerini tazele
+        await fetchTreeReminders(month);
+      } else if (s.kind === 'vegetable' && s.vegetableId) {
+        const res = await fetch(
+          `${API_URL}/vegetables/${s.vegetableId}/maintenance/${s.month}/toggle`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            }
           }
-        }
-      );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || 'Sebze bakımı güncellenemedi.');
-      await fetchVegReminders(month);
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || 'Sebze bakımı güncellenemedi.');
+        await fetchVegReminders(month);
+      }
+
+      // Öneri listesini de güncelle (tamamlanan artık görünmesin)
+      await fetchSuggestions();
+      if (historyVisible) fetchHistory(month);
+    } catch (err) {
+      console.error('Öneri tamamla hatası:', err);
+      alert(err.message || 'Görev tamamlanamadı.');
+    } finally {
+      setSuggestionUpdatingId(null);
     }
-
-    // Öneri listesini de güncelle (tamamlanan artık görünmesin)
-    await fetchSuggestions();
-  } catch (err) {
-    console.error('Öneri tamamla hatası:', err);
-    alert(err.message || 'Görev tamamlanamadı.');
-  } finally {
-    setSuggestionUpdatingId(null);
-  }
-};
+  };
 
   const handleVegCardClick = async (vegId) => {
     const ok = window.confirm(
@@ -3415,9 +3774,77 @@ const handleSuggestionComplete = async (s) => {
         return;
       }
       fetchVegReminders(month);
+      if (historyVisible) fetchHistory(month);
     } catch (err) {
       console.error('Sebze kart tamamla hatası:', err);
       alert('Sunucu hatası.');
+    }
+  };
+
+  const handleCompleteAllTrees = async () => {
+    if (treeReminders.length === 0) return;
+    const ok = window.confirm(
+      `${monthNames[month - 1]} ayı için listedeki TÜM ağaç bakımlarını "tamamlandı" olarak işaretlemek istediğinize emin misiniz?`
+    );
+    if (!ok) return;
+
+    setTreeLoading(true);
+    try {
+      // Tüm ağaç hatırlatmalarını paralel olarak güncelle
+      await Promise.all(
+        treeReminders.map((item) =>
+          fetch(`${API_URL}/trees/${item.treeId}/maintenance/${month}/toggle`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            }
+          })
+        )
+      );
+      // Listeyi yenile
+      await fetchTreeReminders(month);
+      if (historyVisible) fetchHistory(month);
+    } catch (err) {
+      console.error('Toplu ağaç tamamlama hatası:', err);
+      alert('Bazı görevler tamamlanırken hata oluştu.');
+    } finally {
+      setTreeLoading(false);
+    }
+  };
+
+  const handleCompleteAllVeggies = async () => {
+    if (vegReminders.length === 0) return;
+    const ok = window.confirm(
+      `${monthNames[month - 1]} ayı için listedeki TÜM sebze bakımlarını "tamamlandı" olarak işaretlemek istediğinize emin misiniz?`
+    );
+    if (!ok) return;
+
+    setVegLoading(true);
+    try {
+      // Tüm sebze hatırlatmalarını paralel olarak güncelle
+      await Promise.all(
+        vegReminders.map((item) =>
+          fetch(
+            `${API_URL}/vegetables/${item.vegetableId}/maintenance/${month}/toggle`,
+            {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              }
+            }
+          )
+        )
+      );
+      // Listeyi yenile
+      await fetchVegReminders(month);
+      if (historyVisible) fetchHistory(month);
+    } catch (err) {
+      console.error('Toplu sebze tamamlama hatası:', err);
+      alert('Bazı görevler tamamlanırken hata oluştu.');
+    } finally {
+      setVegLoading(false);
     }
   };
 
@@ -3438,7 +3865,7 @@ const handleSuggestionComplete = async (s) => {
         </select>
       </div>
       {/* Otomatik bakım öneri sistemi */}
-            <div className="card">
+      <div className="card">
         <div className="section-header">
           <h3>Otomatik Bakım Önerileri</h3>
 
@@ -3479,273 +3906,410 @@ const handleSuggestionComplete = async (s) => {
             </p>
           )}
 
-       {suggestionsVisible && suggestions.length > 0 && (
-  <ul className="suggestions-list">
-    {suggestions.map((s) => (
-      <li
-        key={s.id}
-        className={
-          'suggestion-item ' +
-          (s.important ? 'important ' : '') +
-          (s.category === 'geçmiş' ? 'suggestion-past ' : '') +
-          (s.category === 'gelecek' ? 'suggestion-future ' : '')
-        }
-      >
-        <div className="suggestion-main">
-          <span className="suggestion-kind-chip">
-            {s.kind === 'tree' ? '🌳 Ağaç' : '🥬 Sebze'}
-          </span>
-          <span className="suggestion-name">{s.name}</span>
-          <span className="suggestion-month">{s.month}. ay</span>
-          {s.important && (
-            <span className="suggestion-important-chip">ÖNEMLİ</span>
-          )}
-        </div>
+        {suggestionsVisible && suggestions.length > 0 && (
+          <ul className="suggestions-list">
+            {suggestions.map((s) => (
+              <li
+                key={s.id}
+                className={
+                  'suggestion-item ' +
+                  (s.important ? 'important ' : '') +
+                  (s.category === 'geçmiş' ? 'suggestion-past ' : '') +
+                  (s.category === 'gelecek' ? 'suggestion-future ' : '')
+                }
+              >
+                <div className="suggestion-main">
+                  <span className="suggestion-kind-chip">
+                    {s.kind === 'tree' ? '🌳 Ağaç' : '🥬 Sebze'}
+                  </span>
+                  <span className="suggestion-name">{s.name}</span>
+                  <span className="suggestion-month">{s.month}. ay</span>
+                  {s.important && (
+                    <span className="suggestion-important-chip">ÖNEMLİ</span>
+                  )}
+                </div>
 
-        <div className="suggestion-task-row">
-          <span className="suggestion-task-type">{s.taskType}</span>
-          <span className="suggestion-task-text">{s.task}</span>
-        </div>
+                <div className="suggestion-task-row">
+                  <span className="suggestion-task-type">{s.taskType}</span>
+                  <span className="suggestion-task-text">{s.task}</span>
+                </div>
 
-        <div className="suggestion-footer-row">
-          <div className="suggestion-category-row">
-            {s.category === 'geçmiş' && <span>⏰ Geçmiş görev</span>}
-            {s.category === 'bu-ay' && (
-              <span>📌 Bu ay yapılması önerilir</span>
-            )}
-            {s.category === 'gelecek' && (
-              <span>🔮 Gelecek ay için hazırlık</span>
-            )}
-          </div>
+                <div className="suggestion-footer-row">
+                  <div className="suggestion-category-row">
+                    {s.category === 'geçmiş' && <span>⏰ Geçmiş görev</span>}
+                    {s.category === 'bu-ay' && (
+                      <span>📌 Bu ay yapılması önerilir</span>
+                    )}
+                    {s.category === 'gelecek' && (
+                      <span>🔮 Gelecek ay için hazırlık</span>
+                    )}
+                  </div>
 
-          <button
-            type="button"
-            className="btn suggestion-complete-btn"
-            onClick={() => handleSuggestionComplete(s)}
-            disabled={suggestionUpdatingId === s.id}
-          >
-            {suggestionUpdatingId === s.id
-              ? 'İşaretleniyor...'
-              : 'TAMAMLANDI'}
-          </button>
-        </div>
-      </li>
-    ))}
-  </ul>
-)}
+                  <button
+                    type="button"
+                    className="btn suggestion-complete-btn"
+                    onClick={() => handleSuggestionComplete(s)}
+                    disabled={suggestionUpdatingId === s.id}
+                  >
+                    {suggestionUpdatingId === s.id
+                      ? 'İşaretleniyor...'
+                      : 'TAMAMLANDI'}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
 
       </div>
 
 
       {/* Ağaç bildirim butonları */}
-            {/* Ağaç bildirim butonları */}
+      {/* Ağaç bildirim butonları */}
       <div className="card">
-        <div className="section-header">
-          <h3>{monthNames[month - 1]} ayı için bildirim gönder (Ağaçlar)</h3>
+        <div
+          className="section-header"
+          onClick={() => setTreeNotifyVisible(!treeNotifyVisible)}
+          style={{ cursor: 'pointer' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <h3 style={{ margin: 0, marginRight: '10px' }}>{monthNames[month - 1]} ayı için bildirim gönder (Ağaçlar)</h3>
+            <span style={{ fontSize: '1.2rem' }}>{treeNotifyVisible ? '▼' : '▶'}</span>
+          </div>
+          {treeReminders.length > 0 && treeNotifyVisible && (
+            <button
+              className="btn primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCompleteAllTrees();
+              }}
+              style={{ marginLeft: 'auto', backgroundColor: '#2e7d32' }}
+            >
+              ✓ Tümünü Tamamla
+            </button>
+          )}
         </div>
 
-        <div className="notify-row">
-          <button
-            className="btn"
-            onClick={sendTreeEmailReminders}
-            disabled={treeEmailSending}
-          >
-            {treeEmailSending
-              ? 'E-posta gönderiliyor...'
-              : 'E-posta ile hatırlat'}
-          </button>
-          <button
-            className="btn"
-            onClick={sendTreePushReminders}
-            disabled={treePushSending}
-          >
-            {treePushSending
-              ? 'Push bildirimi gönderiliyor...'
-              : 'Push bildirimi gönder'}
-          </button>
-         <div style={{ marginTop: '8px' }}>
-    <button
-      className="btn"
-      onClick={sendTreeCombinedReminders}
-      disabled={treeComboSending}
-    >
-      {treeComboSending
-        ? 'E-posta + Push gönderiliyor...'
-        : 'E-posta + Push birlikte gönder'}
-    </button>
-  </div>
+        {treeNotifyVisible && (
+          <>
+            <div className="notify-row">
+              <button
+                className="btn"
+                onClick={sendTreeEmailReminders}
+                disabled={treeEmailSending}
+              >
+                {treeEmailSending
+                  ? 'E-posta gönderiliyor...'
+                  : 'E-posta ile hatırlat'}
+              </button>
+              <button
+                className="btn"
+                onClick={sendTreePushReminders}
+                disabled={treePushSending}
+              >
+                {treePushSending
+                  ? 'Push bildirimi gönderiliyor...'
+                  : 'Push bildirimi gönder'}
+              </button>
+              <div style={{ marginTop: '8px' }}>
+                <button
+                  className="btn"
+                  onClick={sendTreeCombinedReminders}
+                  disabled={treeComboSending}
+                >
+                  {treeComboSending
+                    ? 'E-posta + Push gönderiliyor...'
+                    : 'E-posta + Push birlikte gönder'}
+                </button>
+              </div>
 
 
-        {/* 🔘 sadece önemli görevler kuralı */}
-        <label
-          className="muted"
-          style={{ display: 'block', marginTop: '6px' }}
-        >
-          <input
-            type="checkbox"
-            checked={treeOnlyImportant}
-            onChange={(e) => setTreeOnlyImportant(e.target.checked)}
-            style={{ marginRight: '6px' }}
-          />
-          Sadece <strong>ÖNEMLİ</strong> görevler için bildir (budama / ilaç / gübre)
-        </label>
+              {/* 🔘 sadece önemli görevler kuralı */}
+              <label
+                className="muted"
+                style={{ display: 'block', marginTop: '6px' }}
+              >
+                <input
+                  type="checkbox"
+                  checked={treeOnlyImportant}
+                  onChange={(e) => setTreeOnlyImportant(e.target.checked)}
+                  style={{ marginRight: '6px' }}
+                />
+                Sadece <strong>ÖNEMLİ</strong> görevler için bildir (budama / ilaç / gübre)
+              </label>
 
-        {(treeEmailMessage || treePushMessage) && (
-          <p className="muted">
-            {treeEmailMessage}{' '}
-            {treePushMessage && ` / ${treePushMessage}`}
-          </p>
+              {(treeEmailMessage || treePushMessage) && (
+                <p className="muted">
+                  {treeEmailMessage}{' '}
+                  {treePushMessage && ` / ${treePushMessage}`}
+                </p>
+              )}
+            </div>
+
+            <h3 style={{ marginTop: '20px' }}>Ağaçlar</h3>
+            {treeLoading && <p>Yükleniyor...</p>}
+            {treeError && <p className="error-text">{treeError}</p>}
+            {!treeLoading && treeReminders.length === 0 && (
+              <p>{monthNames[month - 1]} ayı için planlanmış ağaç bakımı yok.</p>
+            )}
+
+            <div className="reminders-grid">
+              {treeReminders.map((item) => (
+                <div
+                  key={item.treeId}
+                  className="card reminder-card-tree"
+                  onClick={() => handleTreeCardClick(item.treeId)}
+                >
+                  <div className="card-header-row">
+                    <h3>{item.name}</h3>
+                    <span className="badge">Adet: {item.count}</span>
+                  </div>
+                  <ul className="maintenance-list">
+                    {item.tasks.map((t, idx) => {
+                      const tag = classifyMaintenanceTask(t || '');
+                      const isImportant = /budama|ilaç|sulama|gübre/i.test(t || '');
+
+                      return (
+                        <li
+                          key={idx}
+                          className={
+                            'maintenance-item ' + (isImportant ? 'important ' : '')
+                          }
+                        >
+                          <span className={`maintenance-tag ${tag.className}`}>
+                            {tag.label}
+                          </span>
+                          <span className="maintenance-task-inline">{t}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
- </div>
 
-      <h3 style={{ marginTop: '20px' }}>Ağaçlar</h3>
-      {treeLoading && <p>Yükleniyor...</p>}
-      {treeError && <p className="error-text">{treeError}</p>}
-      {!treeLoading && treeReminders.length === 0 && (
-        <p>{monthNames[month - 1]} ayı için planlanmış ağaç bakımı yok.</p>
-      )}
 
-      <div className="reminders-grid">
-        {treeReminders.map((item) => (
-          <div
-            key={item.treeId}
-            className="card reminder-card-tree"
-            onClick={() => handleTreeCardClick(item.treeId)}
-          >
-            <div className="card-header-row">
-              <h3>{item.name}</h3>
-              <span className="badge">Adet: {item.count}</span>
-            </div>
-           <ul className="maintenance-list">
-  {item.tasks.map((t, idx) => {
-    const tag = classifyMaintenanceTask(t || '');
-    const isImportant = /budama|ilaç|sulama|gübre/i.test(t || '');
-
-    return (
-      <li
-        key={idx}
-        className={
-          'maintenance-item ' + (isImportant ? 'important ' : '')
-        }
-      >
-        <span className={`maintenance-tag ${tag.className}`}>
-          {tag.label}
-        </span>
-        <span className="maintenance-task-inline">{t}</span>
-      </li>
-    );
-  })}
-</ul>
-
-          </div>
-        ))}
-      </div>
 
       <hr style={{ margin: '24px 0' }} />
 
       {/* Sebze bildirim butonları */}
       <div className="card">
-        <div className="section-header">
-          <h3>{monthNames[month - 1]} ayı için bildirim gönder (Sebzeler)</h3>
+        <div
+          className="section-header"
+          onClick={() => setVegNotifyVisible(!vegNotifyVisible)}
+          style={{ cursor: 'pointer' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <h3 style={{ margin: 0, marginRight: '10px' }}>{monthNames[month - 1]} ayı için bildirim gönder (Sebzeler)</h3>
+            <span style={{ fontSize: '1.2rem' }}>{vegNotifyVisible ? '▼' : '▶'}</span>
+          </div>
+          {vegReminders.length > 0 && vegNotifyVisible && (
+            <button
+              className="btn primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCompleteAllVeggies();
+              }}
+              style={{ marginLeft: 'auto', backgroundColor: '#2e7d32' }}
+            >
+              ✓ Tümünü Tamamla
+            </button>
+          )}
         </div>
-        <div className="notify-row">
-          <button
-            className="btn"
-            onClick={sendVegEmailReminders}
-            disabled={vegEmailSending}
-          >
-            {vegEmailSending
-              ? 'Sebze e-postası gönderiliyor...'
-              : 'Sebzeler için e-posta'}
-          </button>
-          <button
-            className="btn"
-            onClick={sendVegPushReminders}
-            disabled={vegPushSending}
-          >
-            {vegPushSending
-              ? 'Sebze push bildirimi gönderiliyor...'
-              : 'Sebzeler için push'}
-          </button>
- {/* 🆕 Karma buton */}
-  <div style={{ marginTop: '8px' }}>
-    <button
-      className="btn"
-      onClick={sendVegCombinedReminders}
-      disabled={vegComboSending}
-    >
-      {vegComboSending
-        ? 'E-posta + Push gönderiliyor...'
-        : 'E-posta + Push birlikte gönder'}
-    </button>
-  </div>
- {/* 🆕 Sebze kuralı */}
-        <label className="muted" style={{ display: 'block', marginTop: '6px' }}>
-          <input
-            type="checkbox"
-            checked={vegOnlyImportant}
-            onChange={(e) => setVegOnlyImportant(e.target.checked)}
-            style={{ marginRight: '6px' }}
-          />
-          Sadece <strong>ÖNEMLİ</strong> sebze görevleri için bildir (budama / ilaç / gübre)
-        </label>
 
-        {(vegEmailMessage || vegPushMessage) && (
-          <p className="muted">
-            {vegEmailMessage}{' '}
-            {vegPushMessage && ` / ${vegPushMessage}`}
-          </p>
+        {vegNotifyVisible && (
+          <>
+            <div className="notify-row">
+              <button
+                className="btn"
+                onClick={sendVegEmailReminders}
+                disabled={vegEmailSending}
+              >
+                {vegEmailSending
+                  ? 'Sebze e-postası gönderiliyor...'
+                  : 'Sebzeler için e-posta'}
+              </button>
+              <button
+                className="btn"
+                onClick={sendVegPushReminders}
+                disabled={vegPushSending}
+              >
+                {vegPushSending
+                  ? 'Sebze push bildirimi gönderiliyor...'
+                  : 'Sebzeler için push'}
+              </button>
+              {/* 🆕 Karma buton */}
+              <div style={{ marginTop: '8px' }}>
+                <button
+                  className="btn"
+                  onClick={sendVegCombinedReminders}
+                  disabled={vegComboSending}
+                >
+                  {vegComboSending
+                    ? 'E-posta + Push gönderiliyor...'
+                    : 'E-posta + Push birlikte gönder'}
+                </button>
+              </div>
+              {/* 🆕 Sebze kuralı */}
+              <label className="muted" style={{ display: 'block', marginTop: '6px' }}>
+                <input
+                  type="checkbox"
+                  checked={vegOnlyImportant}
+                  onChange={(e) => setVegOnlyImportant(e.target.checked)}
+                  style={{ marginRight: '6px' }}
+                />
+                Sadece <strong>ÖNEMLİ</strong> sebze görevleri için bildir (budama / ilaç / gübre)
+              </label>
+
+              {(vegEmailMessage || vegPushMessage) && (
+                <p className="muted">
+                  {vegEmailMessage}{' '}
+                  {vegPushMessage && ` / ${vegPushMessage}`}
+                </p>
+              )}
+            </div>
+
+            <h3 style={{ marginTop: '20px' }}>Sebzeler</h3>
+            {vegLoading && <p>Yükleniyor...</p>}
+            {vegError && <p className="error-text">{vegError}</p>}
+            {!vegLoading && vegReminders.length === 0 && (
+              <p>{monthNames[month - 1]} ayı için planlanmış sebze bakımı yok.</p>
+            )}
+
+            <div className="reminders-grid">
+              {vegReminders.map((item) => (
+                <div
+                  key={item.vegetableId}
+                  className="card reminder-card-tree"
+                  onClick={() => handleVegCardClick(item.vegetableId)}
+                >
+                  <div className="card-header-row">
+                    <h3>{item.name}</h3>
+                    <span className="badge">Adet: {item.count}</span>
+                  </div>
+                  <ul className="maintenance-list">
+                    {item.tasks.map((t, idx) => {
+                      const tag = classifyMaintenanceTask(t || '');
+                      const isImportant = /budama|ilaç|sulama|gübre/i.test(t || '');
+
+                      return (
+                        <li
+                          key={idx}
+                          className={
+                            'maintenance-item ' + (isImportant ? 'important ' : '')
+                          }
+                        >
+                          <span className={`maintenance-tag ${tag.className}`}>
+                            {tag.label}
+                          </span>
+                          <span className="maintenance-task-inline">{t}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
-
-        </div>
-      
       </div>
 
-      <h3 style={{ marginTop: '20px' }}>Sebzeler</h3>
-      {vegLoading && <p>Yükleniyor...</p>}
-      {vegError && <p className="error-text">{vegError}</p>}
-      {!vegLoading && vegReminders.length === 0 && (
-        <p>{monthNames[month - 1]} ayı için planlanmış sebze bakımı yok.</p>
-      )}
 
-      <div className="reminders-grid">
-        {vegReminders.map((item) => (
-          <div
-            key={item.vegetableId}
-            className="card reminder-card-tree"
-            onClick={() => handleVegCardClick(item.vegetableId)}
+
+      <hr style={{ margin: '32px 0' }} />
+
+      {/* GEÇMİŞ / TAMAMLANAN GÖREVLER BÖLÜMÜ */}
+      <div className="card" style={{ backgroundColor: '#f9f9f9', border: '1px dashed #ccc' }}>
+        <div className="section-header" style={{ cursor: 'pointer' }} onClick={() => {
+          const next = !historyVisible;
+          setHistoryVisible(next);
+          if (next) fetchHistory(month);
+        }}>
+          <h3>AYLIK GEÇMİŞ BAKIM LİSTESİ (Ağaç + Sebze)</h3>
+          <button
+            type="button"
+            className="btn"
+            style={{ fontSize: '0.9rem', padding: '4px 12px' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              const next = !historyVisible;
+              setHistoryVisible(next);
+              if (next) fetchHistory(month);
+            }}
           >
-            <div className="card-header-row">
-              <h3>{item.name}</h3>
-              <span className="badge">Adet: {item.count}</span>
-            </div>
-           <ul className="maintenance-list">
-  {item.tasks.map((t, idx) => {
-    const tag = classifyMaintenanceTask(t || '');
-    const isImportant = /budama|ilaç|sulama|gübre/i.test(t || '');
+            {historyVisible ? 'Listeyi Gizle' : 'Listeyi Getir'}
+          </button>
+        </div>
 
-    return (
-      <li
-        key={idx}
-        className={
-          'maintenance-item ' + (isImportant ? 'important ' : '')
-        }
-      >
-        <span className={`maintenance-tag ${tag.className}`}>
-          {tag.label}
-        </span>
-        <span className="maintenance-task-inline">{t}</span>
-      </li>
-    );
-  })}
-</ul>
+        {historyVisible && (
+          <div style={{ marginTop: '16px' }}>
 
+            {historyLoading && <p>Yükleniyor...</p>}
+            {!historyLoading && historyData.length === 0 && (
+              <p className="muted">Bu ayda henüz tamamlanan bir görev yok.</p>
+            )}
+
+            {historyData.length > 0 && (
+              <>
+
+
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+                  {historyData.some((i) => i.type === 'tree') && (
+                    <button
+                      className="btn small"
+                      onClick={handleUndoAllTrees}
+                      disabled={historyLoading}
+                      style={{ backgroundColor: '#795548', color: 'white' }}
+                    >
+                      🌳 Ağaçları Geri Al
+                    </button>
+                  )}
+                  {historyData.some((i) => i.type === 'vegetable') && (
+                    <button
+                      className="btn small"
+                      onClick={handleUndoAllVeggies}
+                      disabled={historyLoading}
+                      style={{ backgroundColor: '#2e7d32', color: 'white' }}
+                    >
+                      🥬 Sebzeleri Geri Al
+                    </button>
+                  )}
+                </div>
+
+
+
+                <div className="items-list">
+                  {historyData.map((item, idx) => (
+                    <div key={idx} className="item-row" style={{ opacity: 0.8 }}>
+                      <div>
+                        {item.type === 'tree' ? '🌳' : '🥬'} <strong>{item.name}</strong>
+                        <div style={{ fontSize: '0.85rem', color: '#555', marginTop: '4px' }}>
+                          {item.tasks.join(', ')}
+                        </div>
+                      </div>
+                      <button
+                        className="btn small"
+                        onClick={() => handleHistoryToggle(item)}
+                        style={{ marginLeft: 'auto', backgroundColor: '#9e9e9e', color: 'white' }}
+                      >
+                        Geri Al ↺
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-        ))}
+        )}
       </div>
-    </div>
+
+    </div >
   );
 }
 
@@ -3975,6 +4539,14 @@ function Home({ token }) {
 
   // Acil görevi tamamla
   const handleCompleteUrgentTask = async (task) => {
+    // Onay uyarısı göster
+    const confirmMessage = `${task.name} - ${task.task}\n\nBu görevi tamamlamak istediğinize emin misiniz?`;
+    const confirmed = window.confirm(confirmMessage);
+
+    if (!confirmed) {
+      return;
+    }
+
     const endpoint = task.type === 'Ağaç' ? 'trees' : 'vegetables';
     const url = `${API_URL}/${endpoint}/${task.id}/maintenance/${task.month}/toggle`;
 
@@ -4073,14 +4645,13 @@ function Home({ token }) {
     'Cumartesi'
   ];
 
-  const dateStr = `${dayNames[now.getDay()]} ${now.getDate()} ${
-    monthNames[now.getMonth()]
-  } ${now.getFullYear()}`;
+  const dateStr = `${dayNames[now.getDay()]} ${now.getDate()} ${monthNames[now.getMonth()]
+    } ${now.getFullYear()}`;
   const timeStr = now.toLocaleTimeString('tr-TR', {
     hour: '2-digit',
     minute: '2-digit'
   });
-const treePercent =
+  const treePercent =
     treeTasks === 0 ? 0 : Math.round((treeDone / treeTasks) * 100);
   const vegPercent =
     vegTasks === 0 ? 0 : Math.round((vegDone / vegTasks) * 100);
@@ -4092,7 +4663,7 @@ const treePercent =
   const overallPercent =
     totalTasks === 0 ? 0 : Math.round((totalDone / totalTasks) * 100);
 
- // 🎨 Light Mode Renk Paleti (modern ve sade)
+  // 🎨 Light Mode Renk Paleti (modern ve sade)
   const chartText = '#1f2937';     // koyu gri yazı
   const chartGrid = '#e5e7eb';     // açık grid çizgisi
   const doughnutBase = '#e5e7eb';  // kalan görev rengi (açık gri)
@@ -4403,7 +4974,7 @@ const treePercent =
         </div>
       </div>
 
-            <div className="home-grid">
+      <div className="home-grid">
         <div className="home-card">
           <h3>Bu Ay - Ağaç Bakımları</h3>
           <p>
@@ -4470,12 +5041,12 @@ const treePercent =
           <p className="muted" style={{ marginBottom: 4 }}>
             Toplam {totalDone}/{totalTasks} görev tamamlandı.
           </p>
-        <div className="chart-wrapper chart-wrapper-donut">
-  <Doughnut data={doughnutData} options={doughnutOptions} />
-  <div className="chart-center-label">
-    %{overallPercent}
-  </div>
-</div>
+          <div className="chart-wrapper chart-wrapper-donut">
+            <Doughnut data={doughnutData} options={doughnutOptions} />
+            <div className="chart-center-label">
+              %{overallPercent}
+            </div>
+          </div>
 
         </div>
 
@@ -4484,9 +5055,9 @@ const treePercent =
           <p className="muted" style={{ marginBottom: 4 }}>
             Yüzdelik bazda karşılaştırma
           </p>
-         <div className="chart-wrapper chart-wrapper-bar">
-      <Bar data={barData} options={barOptions} />
-    </div>
+          <div className="chart-wrapper chart-wrapper-bar">
+            <Bar data={barData} options={barOptions} />
+          </div>
         </div>
       </div>
 
@@ -4506,8 +5077,15 @@ function Settings({ token }) {
   const [testingAutoTask, setTestingAutoTask] = useState(false);
   const [testingHarvest, setTestingHarvest] = useState(false);
   const [testingReminder, setTestingReminder] = useState(false);
+  const [testingWeather, setTestingWeather] = useState(false);
   const [clearingLog, setClearingLog] = useState(false);
   const [testResults, setTestResults] = useState(null);
+
+  // Profil için geçici state (manuel kaydetme için)
+  const [tempProfileSettings, setTempProfileSettings] = useState(null);
+  const [hasProfileChanges, setHasProfileChanges] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState('');
 
   // Ayarları API'den yükle
   useEffect(() => {
@@ -4552,37 +5130,108 @@ function Settings({ token }) {
     fetchSettings();
   }, [token]);
 
-  // Ayarları API'ye kaydet
-  const updateSettings = async (updater) => {
-    const next = typeof updater === 'function' ? updater(settings) : updater;
+  // Settings yüklendiğinde tempProfileSettings'i başlat
+  useEffect(() => {
+    if (settings?.profile) {
+      setTempProfileSettings({ ...settings.profile });
+      setHasProfileChanges(false);
+    }
+  }, [settings]);
 
-    // Optimistic update
-    setSettings(next);
-    setSaving(true);
+  // Profil alanlarını geçici state'e kaydet (otomatik kaydetme YAPMA)
+  const handleProfileChange = (field, value) => {
+    setTempProfileSettings(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setHasProfileChanges(true);
+    setProfileMessage('');
+  };
 
-    // localStorage'a da kaydet
-    saveSettings(next);
+  // Profil ayarlarını kaydet
+  const handleSaveProfileSettings = async () => {
+    if (!hasProfileChanges || !tempProfileSettings) return;
+
+    setSavingProfile(true);
+    setProfileMessage('');
 
     try {
-      await fetch(`${API_URL}/settings`, {
+      // Tüm profil alanlarını tek seferde güncelle
+      const updatedSettings = {
+        ...settings,
+        profile: tempProfileSettings
+      };
+
+      const res = await fetch(`${API_URL}/settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(next)
+        body: JSON.stringify(updatedSettings)
       });
 
-      setTimeout(() => setSaving(false), 400);
+      if (res.ok) {
+        setSettings(updatedSettings);
+        saveSettings(updatedSettings);
+        setHasProfileChanges(false);
+        setProfileMessage('✅ Profil ayarları kaydedildi!');
+        setTimeout(() => setProfileMessage(''), 3000);
+      } else {
+        throw new Error('Kaydetme başarısız');
+      }
     } catch (err) {
-      console.error('Ayarlar kaydedilemedi:', err);
-      setSaving(false);
-      setMessage('Ayarlar kaydedilemedi. Lütfen tekrar deneyin.');
+      console.error('Profil kaydetme hatası:', err);
+      setProfileMessage('❌ Kaydetme başarısız. Lütfen tekrar deneyin.');
+    } finally {
+      setSavingProfile(false);
     }
   };
 
+  // Profil değişikliklerini iptal et
+  const handleCancelProfileChanges = useCallback(() => {
+    if (settings?.profile) {
+      setTempProfileSettings({ ...settings.profile });
+      setHasProfileChanges(false);
+      setProfileMessage('');
+    }
+  }, [settings, setTempProfileSettings, setHasProfileChanges, setProfileMessage]);
+
+  // Ayarları anında uygula (CSS sınıfları vb.)
+  const applySettingsImmediately = useCallback((settings) => {
+    if (!settings || !settings.appearance) return;
+
+    // Tema ayarı
+    if (settings.appearance.theme) {
+      const theme = settings.appearance.theme;
+      document.body.classList.remove('theme-light', 'theme-dark', 'theme-auto');
+
+      if (theme === 'auto') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.body.classList.add(prefersDark ? 'theme-dark' : 'theme-light');
+      } else {
+        document.body.classList.add(`theme-${theme}`);
+      }
+    }
+
+    // Renk şeması
+    if (settings.appearance.colorScheme) {
+      document.body.classList.remove('color-green', 'color-blue', 'color-brown', 'color-purple');
+      document.body.classList.add(`color-${settings.appearance.colorScheme}`);
+    }
+
+    // Yazı boyutu
+    if (settings.appearance.fontSize) {
+      document.body.classList.remove('font-small', 'font-medium', 'font-large');
+      document.body.classList.add(`font-${settings.appearance.fontSize}`);
+    }
+  }, []); // Bağımlılık yok
+
+  // Ayarları API'ye kaydet
+
+
   // Tek bir ayarı güncelle (PATCH)
-  const updateSingleSetting = async (path, value) => {
+  const updateSingleSetting = useCallback(async (path, value) => {
     // Optimistic update
     let updatedSettings;
     setSettings((prev) => {
@@ -4632,37 +5281,7 @@ function Settings({ token }) {
       console.error('Ayar kaydedilemedi:', err);
       setSaving(false);
     }
-  };
-
-  // Ayarları anında uygula (CSS sınıfları vb.)
-  const applySettingsImmediately = (settings) => {
-    if (!settings || !settings.appearance) return;
-
-    // Tema ayarı
-    if (settings.appearance.theme) {
-      const theme = settings.appearance.theme;
-      document.body.classList.remove('theme-light', 'theme-dark', 'theme-auto');
-
-      if (theme === 'auto') {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        document.body.classList.add(prefersDark ? 'theme-dark' : 'theme-light');
-      } else {
-        document.body.classList.add(`theme-${theme}`);
-      }
-    }
-
-    // Renk şeması
-    if (settings.appearance.colorScheme) {
-      document.body.classList.remove('color-green', 'color-blue', 'color-brown', 'color-purple');
-      document.body.classList.add(`color-${settings.appearance.colorScheme}`);
-    }
-
-    // Yazı boyutu
-    if (settings.appearance.fontSize) {
-      document.body.classList.remove('font-small', 'font-medium', 'font-large');
-      document.body.classList.add(`font-${settings.appearance.fontSize}`);
-    }
-  };
+  }, [settings, token, setSettings, setSaving, applySettingsImmediately]);
 
   const handleToggle = (path) => {
     if (!settings) return;
@@ -4874,6 +5493,44 @@ function Settings({ token }) {
     }
   };
 
+  const handleTestWeatherAlert = async () => {
+    if (!token) {
+      setMessage('Önce giriş yapmalısın.');
+      return;
+    }
+    setTestingWeather(true);
+    setMessage('');
+    setTestResults(null);
+    try {
+      const res = await fetch(`${API_URL}/test-weather-alert`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Test başarısız');
+      }
+
+      setTestResults({
+        type: 'weather',
+        success: true,
+        data: data
+      });
+      setMessage(data.message);
+    } catch (err) {
+      console.error('Hava durumu testi hatası:', err);
+      setMessage(err.message || 'Test başarısız');
+      setTestResults({
+        type: 'weather',
+        success: false,
+        error: err.message
+      });
+    } finally {
+      setTestingWeather(false);
+    }
+  };
+
   const handleClearReminderLog = async () => {
     if (!token) {
       setMessage('Önce giriş yapmalısın.');
@@ -4946,7 +5603,7 @@ function Settings({ token }) {
 
       <div className="settings-grid">
         {/* Profil & Kişiselleştirme */}
-        <section className="settings-section">
+        <section className="settings-section settings-section-wide">
           <h3>👤 Profil &amp; Kişiselleştirme</h3>
           <p className="settings-section-desc">
             Bahçe bilgilerini ve deneyim seviyeni belirle.
@@ -4963,8 +5620,8 @@ function Settings({ token }) {
               type="text"
               className="settings-select"
               placeholder="örn: Köy Bahçesi, Balkon Bahçesi"
-              value={settings.profile.gardenName}
-              onChange={(e) => handleSelectChange('profile.gardenName', e.target.value)}
+              value={tempProfileSettings?.gardenName || ''}
+              onChange={(e) => handleProfileChange('gardenName', e.target.value)}
               maxLength="50"
             />
           </div>
@@ -4980,8 +5637,8 @@ function Settings({ token }) {
               type="number"
               className="settings-select"
               placeholder="örn: 500"
-              value={settings.profile.gardenSize}
-              onChange={(e) => handleNumberChange('profile.gardenSize', e.target.value)}
+              value={tempProfileSettings?.gardenSize || 0}
+              onChange={(e) => handleProfileChange('gardenSize', Number(e.target.value))}
               min="0"
               max="100000"
             />
@@ -4996,17 +5653,132 @@ function Settings({ token }) {
             </div>
             <select
               className="settings-select"
-              value={settings.profile.experienceLevel}
-              onChange={(e) => handleSelectChange('profile.experienceLevel', e.target.value)}
+              value={tempProfileSettings?.experienceLevel || 'beginner'}
+              onChange={(e) => handleProfileChange('experienceLevel', e.target.value)}
             >
               <option value="beginner">Yeni Başlayan</option>
               <option value="intermediate">Orta Seviye</option>
               <option value="advanced">İleri Seviye</option>
             </select>
           </div>
+
+          <div className="settings-divider"></div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Site Başlığı</div>
+              <div className="settings-item-desc">
+                Footer ve header'da görünecek site başlığı
+              </div>
+            </div>
+            <input
+              type="text"
+              className="settings-select"
+              placeholder="örn: Akıllı Bahçe"
+              value={tempProfileSettings?.siteTitle || ''}
+              onChange={(e) => handleProfileChange('siteTitle', e.target.value)}
+              maxLength="50"
+            />
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Site Açıklaması</div>
+              <div className="settings-item-desc">
+                Footer'da görünecek site açıklaması
+              </div>
+            </div>
+            <textarea
+              className="settings-select-area "
+              placeholder="Bahçenizi dijital dünyada yönetin..."
+              value={tempProfileSettings?.siteDescription || ''}
+              onChange={(e) => handleProfileChange('siteDescription', e.target.value)}
+              rows="3"
+              maxLength="200"
+              style={{ resize: 'vertical', fontFamily: 'inherit' }}
+            />
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">E-posta Adresi</div>
+              <div className="settings-item-desc">
+                Footer ve canlı destekte görünecek e-posta
+              </div>
+            </div>
+            <input
+              type="email"
+              className="settings-select"
+              placeholder="örn: info@akillibahce.com"
+              value={tempProfileSettings?.siteEmail || ''}
+              onChange={(e) => handleProfileChange('siteEmail', e.target.value)}
+              maxLength="100"
+            />
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Web Sitesi</div>
+              <div className="settings-item-desc">
+                Footer'da görünecek web sitesi adresi
+              </div>
+            </div>
+            <input
+              type="text"
+              className="settings-select"
+              placeholder="örn: www.akillibahce.com"
+              value={tempProfileSettings?.siteWebsite || ''}
+              onChange={(e) => handleProfileChange('siteWebsite', e.target.value)}
+              maxLength="100"
+            />
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">WhatsApp Numarası</div>
+              <div className="settings-item-desc">
+                Canlı destekte görünecek WhatsApp numarası (örn: 905551234567)
+              </div>
+            </div>
+            <input
+              type="text"
+              className="settings-select"
+              placeholder="örn: 905551234567"
+              value={tempProfileSettings?.siteWhatsApp || ''}
+              onChange={(e) => handleProfileChange('siteWhatsApp', e.target.value)}
+              maxLength="20"
+            />
+          </div>
+
+          {/* Kaydet / İptal Butonları */}
+          <div className="profile-save-row">
+            {profileMessage && (
+              <span className="profile-save-message">{profileMessage}</span>
+            )}
+            {hasProfileChanges && (
+              <>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleCancelProfileChanges}
+                  disabled={savingProfile}
+                >
+                  İptal
+                </button>
+                <button
+                  type="button"
+                  className="btn primary"
+                  onClick={handleSaveProfileSettings}
+                  disabled={savingProfile}
+                >
+                  {savingProfile ? 'Kaydediliyor...' : 'Kaydet'}
+                </button>
+              </>
+            )}
+          </div>
         </section>
 
-       
+
         {/* Görünüm & Tema */}
         <section className="settings-section">
           <h3>🎨 Görünüm &amp; Tema</h3>
@@ -5105,51 +5877,7 @@ function Settings({ token }) {
         </section>
 
 
-{/* Tarih & Saat */}
-        <section className="settings-section">
-          <h3>📅 Tarih &amp; Saat</h3>
-          <p className="settings-section-desc">
-            Uygulama içinde görünen tarih ve saat biçimini belirle.
-          </p>
-
-          <div className="settings-item">
-            <div>
-              <div className="settings-item-title">Tarih formatı</div>
-              <div className="settings-item-desc">
-                Tarih gösterimlerinde kullanılacak format
-              </div>
-            </div>
-            <select
-              className="settings-select"
-              value={settings.ui.dateFormat}
-              onChange={(e) => handleSelectChange('ui.dateFormat', e.target.value)}
-            >
-              <option value="dd.MM.yyyy">27.11.2025</option>
-              <option value="yyyy-MM-dd">2025-11-27</option>
-              <option value="dd MMMM yyyy">27 Kasım 2025</option>
-            </select>
-          </div>
-
-          <div className="settings-item">
-            <div>
-              <div className="settings-item-title">Saat formatı</div>
-              <div className="settings-item-desc">
-                Saat gösterimlerinde kullanılacak format
-              </div>
-            </div>
-            <select
-              className="settings-select"
-              value={settings.ui.timeFormat}
-              onChange={(e) => handleSelectChange('ui.timeFormat', e.target.value)}
-            >
-              <option value="HH:mm">24 saat (14:30)</option>
-              <option value="hh:mm">12 saat (02:30)</option>
-            </select>
-          </div>
-        </section>
-
-
- {/* Bildirim & Hatırlatma */}
+        {/* Bildirim & Hatırlatma */}
         <section className="settings-section settings-section-wide">
           <h3>📬 Bildirim &amp; Hatırlatma</h3>
           <p className="settings-section-desc">
@@ -5298,9 +6026,9 @@ function Settings({ token }) {
         </section>
         {/* Hava Durumu */}
         <section className="settings-section">
-          <h3>🌤️ Hava Durumu</h3>
+          <h3>🌤️ Hava Durumu & Tarih/Saat</h3>
           <p className="settings-section-desc">
-            Hava durumu ayarlarını özelleştir.
+            Hava durumu ayarlarını ve tarih/saat formatlarını özelleştir.
           </p>
 
           <div className="settings-item">
@@ -5430,6 +6158,43 @@ function Settings({ token }) {
               />
               <span className="slider" />
             </label>
+          </div>
+
+          <div className="settings-divider"></div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Tarih formatı</div>
+              <div className="settings-item-desc">
+                Tarih gösterimlerinde kullanılacak format
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.ui.dateFormat}
+              onChange={(e) => handleSelectChange('ui.dateFormat', e.target.value)}
+            >
+              <option value="dd.MM.yyyy">27.11.2025</option>
+              <option value="yyyy-MM-dd">2025-11-27</option>
+              <option value="dd MMMM yyyy">27 Kasım 2025</option>
+            </select>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Saat formatı</div>
+              <div className="settings-item-desc">
+                Saat gösterimlerinde kullanılacak format
+              </div>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.ui.timeFormat}
+              onChange={(e) => handleSelectChange('ui.timeFormat', e.target.value)}
+            >
+              <option value="HH:mm">24 saat (14:30)</option>
+              <option value="hh:mm">12 saat (02:30)</option>
+            </select>
           </div>
         </section>
 
@@ -5617,11 +6382,11 @@ function Settings({ token }) {
           </div>
         </section>
 
- 
 
-       
 
-        
+
+
+
 
         {/* Test Özellikleri */}
         <section className="settings-section settings-section-wide">
@@ -5678,6 +6443,23 @@ function Settings({ token }) {
               disabled={testingReminder}
             >
               {testingReminder ? 'Test ediliyor...' : 'Test Et'}
+            </button>
+          </div>
+
+          <div className="settings-item">
+            <div>
+              <div className="settings-item-title">Hava durumu uyarısı testi</div>
+              <div className="settings-item-desc">
+                Yağmur, aşırı sıcaklık ve don uyarılarını manuel tetikle (ve logu temizle)
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={handleTestWeatherAlert}
+              disabled={testingWeather}
+            >
+              {testingWeather ? 'Test ediliyor...' : 'Test Et'}
             </button>
           </div>
 
@@ -5746,10 +6528,18 @@ function Settings({ token }) {
                   )}
                 </div>
               )}
+              {testResults.type === 'weather' && (
+                <div>
+                  <p><strong>✅ {testResults.data.message}</strong></p>
+                  <p className="test-note">
+                    {testResults.data.info}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </section>
-{/* Veri yönetimi */}
+        {/* Veri yönetimi */}
         <section className="settings-section">
           <h3>📦 Veri Yönetimi</h3>
           <p className="settings-section-desc">
@@ -5789,7 +6579,7 @@ function Settings({ token }) {
 
 /* -------------------- RAPORLAR -------------------- */
 
- 
+
 
 function Reports({ token }) {
   // 📌 Aylık özet için durumlar
@@ -5802,6 +6592,7 @@ function Reports({ token }) {
   const [historyItems, setHistoryItems] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState('');
+  const [historyVisible, setHistoryVisible] = useState(false); // 🆕 Added for toggle
 
   // 📊 Grafik görünümü
   const [showCharts, setShowCharts] = useState(true);
@@ -5949,30 +6740,30 @@ function Reports({ token }) {
   // ====== Grafik verileri ======
   const chartData = report
     ? {
-        labels: ['Ağaçlar', 'Sebzeler', 'Toplam'],
-        datasets: [
-          {
-            label: 'Tamamlanma (%)',
-            data: [report.tree.percent, report.veg.percent, report.total.percent],
-            backgroundColor: ['#22c55e', '#3b82f6', '#6366f1'],
-            borderRadius: 10,
-            maxBarThickness: 45
-          }
-        ]
-      }
+      labels: ['Ağaçlar', 'Sebzeler', 'Toplam'],
+      datasets: [
+        {
+          label: 'Tamamlanma (%)',
+          data: [report.tree.percent, report.veg.percent, report.total.percent],
+          backgroundColor: ['#22c55e', '#3b82f6', '#6366f1'],
+          borderRadius: 10,
+          maxBarThickness: 45
+        }
+      ]
+    }
     : null;
 
   const doughnutData = report
     ? {
-        labels: ['Tamamlanan', 'Kalan'],
-        datasets: [
-          {
-            data: [report.total.done, report.total.remaining],
-            backgroundColor: ['#22c55e', '#e5e7eb'],
-            borderWidth: 0
-          }
-        ]
-      }
+      labels: ['Tamamlanan', 'Kalan'],
+      datasets: [
+        {
+          data: [report.total.done, report.total.remaining],
+          backgroundColor: ['#22c55e', '#e5e7eb'],
+          borderWidth: 0
+        }
+      ]
+    }
     : null;
 
   const barOptions = {
@@ -6013,6 +6804,7 @@ function Reports({ token }) {
               onChange={(e) => setMonth(Number(e.target.value))}
               className="report-month-select"
             >
+              <option value={0}>Tüm Aylar</option>
               {monthNames.map((m, idx) => (
                 <option key={idx + 1} value={idx + 1}>
                   {idx + 1}. {m}
@@ -6137,37 +6929,45 @@ function Reports({ token }) {
           <button
             className="btn"
             type="button"
-            onClick={loadHistory}
+            onClick={() => {
+              const next = !historyVisible;
+              setHistoryVisible(next);
+              if (next && historyItems.length === 0) loadHistory();
+            }}
             disabled={historyLoading}
           >
-            {historyLoading ? 'Yükleniyor...' : 'Raporu Getir'}
+            {historyLoading ? 'Yükleniyor...' : (historyVisible ? 'Raporu Gizle' : 'Raporu Getir')}
           </button>
         </div>
 
-        {historyError && <p className="error-text">{historyError}</p>}
+        {historyVisible && (
+          <>
+            {historyError && <p className="error-text">{historyError}</p>}
 
-        {historyItems.length === 0 && !historyLoading && !historyError && (
-          <p className="muted">Tamamlanmış bakım kaydı bulunamadı.</p>
-        )}
+            {historyItems.length === 0 && !historyLoading && !historyError && (
+              <p className="muted">Tamamlanmış bakım kaydı bulunamadı.</p>
+            )}
 
-        {historyItems.length > 0 && historyItems[0].type && (
-          <ul className="history-list">
-            {historyItems.map((h, i) => (
-              <li key={i} className="history-item">
-                <span className="history-type">{h.type}</span>
-                <span className="history-name">
-                  {h.kind} – {h.name}
-                </span>
-                <span className="history-task">{h.task}</span>
-                <span className="history-month">{h.month}. Ay</span>
-                <span className="history-date">
-                  {h.completedAt
-                    ? new Date(h.completedAt).toLocaleDateString('tr-TR')
-                    : '-'}
-                </span>
-              </li>
-            ))}
-          </ul>
+            {historyItems.length > 0 && historyItems[0].type && (
+              <ul className="history-list">
+                {historyItems.map((h, i) => (
+                  <li key={i} className="history-item">
+                    <span className="history-type">{h.type}</span>
+                    <span className="history-name">
+                      {h.kind} – {h.name}
+                    </span>
+                    <span className="history-task">{h.task}</span>
+                    <span className="history-month">{h.month}. Ay</span>
+                    <span className="history-date">
+                      {h.completedAt
+                        ? new Date(h.completedAt).toLocaleDateString('tr-TR')
+                        : '-'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -6175,7 +6975,7 @@ function Reports({ token }) {
 }
 
 
- 
+
 
 
 
@@ -6186,7 +6986,7 @@ function Reports({ token }) {
 
 function App() {
   const [token, setToken] = useState(null);
-  const [username, setUsername] = useState('');
+  const [, setUsername] = useState(''); // username unused, keeping setUsername
   const [tab, setTab] = useState(() => {
     // Sayfa yüklenirken localStorage'dan tab değerini oku
     const savedTab = localStorage.getItem('sg_current_tab');
@@ -6198,6 +6998,8 @@ function App() {
   const [reminderMonth, setReminderMonth] = useState(
     new Date().getMonth() + 1
   );
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showChatWidget, setShowChatWidget] = useState(false);
 
   useEffect(() => {
     const storedToken = localStorage.getItem('sg_token');
@@ -6257,10 +7059,25 @@ function App() {
     };
   }, []);
 
-  // Tab değiştiğinde localStorage'a kaydet
+  // Tab değiştiğinde localStorage'a kaydet ve yukarı kaydır
   useEffect(() => {
     localStorage.setItem('sg_current_tab', tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [tab]);
+
+  // Scroll listener - "Yukarı Çık" butonunu göster/gizle
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.pageYOffset > 300) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleLogin = (jwtToken, user) => {
     setToken(jwtToken);
@@ -6274,6 +7091,11 @@ function App() {
     setUsername('');
     localStorage.removeItem('sg_token');
     localStorage.removeItem('sg_username');
+  };
+
+  // Sayfayı yukarı kaydır
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Tarayıcı tespiti
@@ -6432,182 +7254,192 @@ function App() {
 
   return (
     <div className="app">
-     <header className="app-header">
-  <div className="header-left">
-   <div className="logo-box" onClick={() => setTab('home')} style={{ cursor: 'pointer' }}>
- <img
-  src={`${API_URL.replace('/api', '')}/uploads/logo.png`}
-  alt="Akıllı Bahçe"
-  className="app-logo"
-/>
-</div>
+      <header className="app-header">
+        <div className="header-left">
+          <div className="logo-box" onClick={() => setTab('home')} style={{ cursor: 'pointer' }}>
+            <img
+              src={`${API_URL.replace('/api', '')}/uploads/logo.png`}
+              alt={loadSettings().profile.siteTitle || 'Akıllı Bahçe'}
+              className="app-logo"
+            />
+            <span className="app-title">{loadSettings().profile.siteTitle || 'Akıllı Bahçe'}</span>
+          </div>
 
-  </div>
-    
-  <div className="header-right">
-    <div className="mobile-header-info">
-  <WeatherWidgeth token={token} />
-</div>
+        </div>
 
-<button
-  type="button"
-  className="tabs-hamburger"
-  onClick={() => setMobileTabsOpen((open) => !open)}
->
-  ☰
-</button>
- 
-    {/* --- HAVA DURUMU + SAAT YANYANA --- */}
-    <div className="weather-clock-row">
-      <WeatherWidget token={token} />
+        <div className="header-right">
+          <div className="mobile-header-info">
+            <WeatherWidgeth token={token} />
+          </div>
 
-       
-    </div>
-
-    {/* --- Çıkış + Bildirimler Butonları --- */}
-    <div className="user-controls-row">
-
-      <button className="btn icon-btn" onClick={handleLogout}>
-        <span className="btn-icon">🚪</span>
-        <span>Çıkış Yap</span>
-      </button>
-
-      {typeof Notification !== 'undefined' && 'serviceWorker' in navigator && (
-        <button
-          className="btn icon-btn"
-          onClick={subscribeToPush}
-          disabled={pushEnabled}
-        >
-          <span className="btn-icon">🔔</span>
-          <span>{pushEnabled ? 'Bildirimler açık' : 'Bildirimleri aç'}</span>
-        </button>
-      )}
-    </div>
-  </div>
-</header>
-
-
-     {pushError && <p className="error-text">{pushError}</p>}
-
-<div className="tabs-wrapper">
-   
-  {/* Mobil açılır menü (sekme listesi + en altta çıkış/bildirim) */}
-  {mobileTabsOpen && (
-    <div className="tabs-mobile-menu">
-      <div className="tabs-mobile-items">
-        <button
-          className={`tabs-mobile-item ${tab === 'home' ? 'active' : ''}`}
-          onClick={() => {
-            setTab('home');
-            setMobileTabsOpen(false);
-          }}
-        >
-          Home
-        </button>
-        <button
-          className={`tabs-mobile-item ${tab === 'trees' ? 'active' : ''}`}
-          onClick={() => {
-            setTab('trees');
-            setMobileTabsOpen(false);
-          }}
-        >
-          Ağaçlar
-        </button>
-        <button
-          className={`tabs-mobile-item ${tab === 'vegetables' ? 'active' : ''}`}
-          onClick={() => {
-            setTab('vegetables');
-            setMobileTabsOpen(false);
-          }}
-        >
-          Sebzeler
-        </button>
-        <button
-          className={`tabs-mobile-item ${
-            tab === 'reminders' ? 'active' : ''
-          }`}
-          onClick={() => {
-            setTab('reminders');
-            setMobileTabsOpen(false);
-          }}
-        >
-          Hatırlatmalar
-        </button>
-        <button
-          className={`tabs-mobile-item ${
-            tab === 'calendar' ? 'active' : ''
-          }`}
-          onClick={() => {
-            setTab('calendar');
-            setMobileTabsOpen(false);
-          }}
-        >
-          Takvim
-        </button>
-        <button
-          className={`tabs-mobile-item ${tab === 'reports' ? 'active' : ''}`}
-          onClick={() => {
-            setTab('reports');
-            setMobileTabsOpen(false);
-          }}
-        >
-          Raporlar
-        </button>
-         <button
-          className={`tabs-mobile-item ${tab === 'weather' ? 'active' : ''}`}
-          onClick={() => {
-            setTab('weather');
-            setMobileTabsOpen(false);
-          }}
-        >
-          Hava Durumu
-        </button>
-        <button
-          className={`tabs-mobile-item ${tab === 'settings' ? 'active' : ''}`}
-          onClick={() => {
-            setTab('settings');
-            setMobileTabsOpen(false);
-          }}
-        >
-          Ayarlar
-        </button>
-      </div>
-
-      {/* 👇 Mobilde MENÜN EN ALTINDA ÇIKIŞ & BİLDİRİM */}
-      <div className="tabs-mobile-footer">
-        <button
-          className="btn icon-btn"
-          onClick={() => {
-            handleLogout();
-            setMobileTabsOpen(false);
-          }}
-        >
-          <span className="btn-icon">🚪</span>
-          <span>Çıkış Yap</span>
-        </button>
-
-        {typeof Notification !== 'undefined' && 'serviceWorker' in navigator && (
           <button
-            className="btn icon-btn"
-            onClick={() => {
-              subscribeToPush();
-              setMobileTabsOpen(false);
-            }}
-            disabled={pushEnabled}
+            type="button"
+            className="tabs-hamburger"
+            onClick={() => setMobileTabsOpen((open) => !open)}
           >
-            <span className="btn-icon">🔔</span>
-            <span>
-              {pushEnabled ? 'Bildirimler açık' : 'Bildirimleri aç'}
-            </span>
+            ☰
           </button>
+
+          {/* --- HAVA DURUMU + SAAT YANYANA --- */}
+          <div className="weather-clock-row">
+            <WeatherWidget token={token} />
+
+
+          </div>
+
+          {/* --- Çıkış + Bildirimler Butonları --- */}
+          <div className="user-controls-row">
+
+            <button className="btn icon-btn" onClick={handleLogout}>
+              <span className="btn-icon">🚪</span>
+              <span>Çıkış Yap</span>
+            </button>
+
+            {typeof Notification !== 'undefined' && 'serviceWorker' in navigator && (
+              <button
+                className="btn icon-btn"
+                onClick={subscribeToPush}
+                disabled={pushEnabled}
+              >
+                <span className="btn-icon">🔔</span>
+                <span>{pushEnabled ? 'Bildirimler açık' : 'Bildirimleri aç'}</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+
+      {pushError && <p className="error-text">{pushError}</p>}
+
+      <div className="tabs-wrapper">
+
+        {/* Mobil açılır menü (sekme listesi + en altta çıkış/bildirim) */}
+        {mobileTabsOpen && (
+          <div className="tabs-mobile-menu">
+            <div className="tabs-mobile-items">
+              <button
+                className={`tabs-mobile-item ${tab === 'home' ? 'active' : ''}`}
+                onClick={() => {
+                  setTab('home');
+                  setMobileTabsOpen(false);
+                }}
+              >
+                Home
+              </button>
+              <button
+                className={`tabs-mobile-item ${tab === 'trees' ? 'active' : ''}`}
+                onClick={() => {
+                  setTab('trees');
+                  setMobileTabsOpen(false);
+                }}
+              >
+                Ağaçlar
+              </button>
+              <button
+                className={`tabs-mobile-item ${tab === 'vegetables' ? 'active' : ''}`}
+                onClick={() => {
+                  setTab('vegetables');
+                  setMobileTabsOpen(false);
+                }}
+              >
+                Sebzeler
+              </button>
+              <button
+                className={`tabs-mobile-item ${tab === 'reminders' ? 'active' : ''
+                  }`}
+                onClick={() => {
+                  setTab('reminders');
+                  setMobileTabsOpen(false);
+                }}
+              >
+                Hatırlatmalar
+              </button>
+              <button
+                className={`tabs-mobile-item ${tab === 'calendar' ? 'active' : ''
+                  }`}
+                onClick={() => {
+                  setTab('calendar');
+                  setMobileTabsOpen(false);
+                }}
+              >
+                Takvim
+              </button>
+              <button
+                className={`tabs-mobile-item ${tab === 'reports' ? 'active' : ''}`}
+                onClick={() => {
+                  setTab('reports');
+                  setMobileTabsOpen(false);
+                }}
+              >
+                Raporlar
+              </button>
+              <button
+                className={`tabs-mobile-item ${tab === 'weather' ? 'active' : ''}`}
+                onClick={() => {
+                  setTab('weather');
+                  setMobileTabsOpen(false);
+                }}
+              >
+                Hava Durumu
+              </button>
+              {/* 🗺️ HARİTA TAB BUTONU */}
+              <button
+                className={`tabs-mobile-item ${tab === 'map' ? 'active' : ''}`}
+                onClick={() => {
+                  setTab('map');
+                  setMobileTabsOpen(false);
+                }}
+              >
+                Harita
+              </button>
+
+              <button
+                className={`tabs-mobile-item ${tab === 'settings' ? 'active' : ''}`}
+                onClick={() => {
+                  setTab('settings');
+                  setMobileTabsOpen(false);
+                }}
+              >
+                Ayarlar
+              </button>
+            </div>
+
+            {/* 👇 Mobilde MENÜN EN ALTINDA ÇIKIŞ & BİLDİRİM */}
+            <div className="tabs-mobile-footer">
+              <button
+                className="btn icon-btn"
+                onClick={() => {
+                  handleLogout();
+                  setMobileTabsOpen(false);
+                }}
+              >
+                <span className="btn-icon">🚪</span>
+                <span>Çıkış Yap</span>
+              </button>
+
+              {typeof Notification !== 'undefined' && 'serviceWorker' in navigator && (
+                <button
+                  className="btn icon-btn"
+                  onClick={() => {
+                    subscribeToPush();
+                    setMobileTabsOpen(false);
+                  }}
+                  disabled={pushEnabled}
+                >
+                  <span className="btn-icon">🔔</span>
+                  <span>
+                    {pushEnabled ? 'Bildirimler açık' : 'Bildirimleri aç'}
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
         )}
       </div>
-    </div>
-  )}
-</div>
 
-{/* Desktop’ta görünen normal sekmeler */}
- 
+      {/* Desktop’ta görünen normal sekmeler */}
+
 
 
 
@@ -6655,6 +7487,12 @@ function App() {
           Hava Durumu
         </button>
         <button
+          className={`tab ${tab === 'map' ? 'active' : ''}`}
+          onClick={() => setTab('map')}
+        >
+          Harita
+        </button>
+        <button
           className={`tab ${tab === 'settings' ? 'active' : ''}`}
           onClick={() => setTab('settings')}
         >
@@ -6662,61 +7500,214 @@ function App() {
         </button>
       </nav>
 
-     <main className="app-main">
-  {tab === 'home' && (
-    <div className="tab-panel">
-      <Home token={token} />
-    </div>
-  )}
-  {tab === 'trees' && (
-    <div className="tab-panel">
-      <TreeManager token={token} />
-    </div>
-  )}
-  {tab === 'vegetables' && (
-    <div className="tab-panel">
-      <VegetableManager token={token} />
-    </div>
-  )}
-  {tab === 'reminders' && (
-    <div className="tab-panel">
-      <Reminders
-        token={token}
-        month={reminderMonth}
-        onChangeMonth={setReminderMonth}
-      />
-    </div>
-  )}
-  {tab === 'calendar' && (
-    <div className="tab-panel">
-      <CalendarView
-        token={token}
-        onSelectMonth={(m) => {
-          setReminderMonth(m);
-          setTab('reminders');
-        }}
-      />
-    </div>
-  )}
-  {tab === 'reports' && (
-    <div className="tab-panel">
-      <Reports token={token} />
-    </div>
-  )}
-  {tab === 'weather' && (
-    <div className="tab-panel">
-      <WeatherTab token={token} />
-    </div>
-  )}
+      <main className="app-main">
+        {tab === 'home' && (
+          <div className="tab-panel">
+            <Home token={token} />
+          </div>
+        )}
+        {tab === 'trees' && (
+          <div className="tab-panel">
+            <TreeManager token={token} />
+          </div>
+        )}
+        {tab === 'vegetables' && (
+          <div className="tab-panel">
+            <VegetableManager token={token} />
+          </div>
+        )}
+        {tab === 'reminders' && (
+          <div className="tab-panel">
+            <Reminders
+              token={token}
+              month={reminderMonth}
+              onChangeMonth={setReminderMonth}
+            />
+          </div>
+        )}
+        {tab === 'calendar' && (
+          <div className="tab-panel">
+            <CalendarView
+              token={token}
+              onSelectMonth={(m) => {
+                setReminderMonth(m);
+                setTab('reminders');
+              }}
+            />
+          </div>
+        )}
+        {tab === 'reports' && (
+          <div className="tab-panel">
+            <Reports token={token} />
+          </div>
+        )}
+        {tab === 'weather' && (
+          <div className="tab-panel">
+            <WeatherTab token={token} />
+          </div>
+        )}
 
+        {/* 🗺️ HARİTA TAB İÇERİĞİ */}
+        {tab === 'map' && (
+          <div className="tab-panel map-view" style={{ overflow: 'hidden', height: 'calc(100vh - 80px)' }}>
+            <GardenMapTab token={token} />
+          </div>
+        )}
 
+        {tab === 'settings' && (
+          <div className="tab-panel">
+            <Settings token={token} />
+          </div>
+        )}
+      </main>
 
-  {tab === 'settings' && (
-    <div className="tab-panel">
-      <Settings token={token} />
-    </div>
-  )}
-</main>
+      <footer className="app-footer">
+        <div className="footer-content">
+          <div className="footer-grid">
+            <div className="footer-section">
+              <h3 className="footer-title">🌱 {loadSettings().profile.siteTitle || 'Akıllı Bahçe'}</h3>
+              <p className="footer-desc">
+                {loadSettings().profile.siteDescription || 'Bahçenizi dijital dünyada yönetin. Ağaçlarınızı, sebzelerinizi takip edin, bakım zamanlarını kaçırmayın.'}
+              </p>
+              <p className="footer-version">v1.0.0</p>
+            </div>
+
+            <div className="footer-section">
+              <h4 className="footer-heading">Hızlı Erişim</h4>
+              <ul className="footer-links">
+                <li onClick={() => setTab('home')} style={{ cursor: 'pointer' }}>🏠 Ana Sayfa</li>
+                <li onClick={() => setTab('trees')} style={{ cursor: 'pointer' }}>🌳 Ağaçlar</li>
+                <li onClick={() => setTab('vegetables')} style={{ cursor: 'pointer' }}>🥕 Sebzeler</li>
+                <li onClick={() => setTab('calendar')} style={{ cursor: 'pointer' }}>📅 Takvim</li>
+              </ul>
+            </div>
+
+            <div className="footer-section">
+              <h4 className="footer-heading">Araçlar</h4>
+              <ul className="footer-links">
+                <li onClick={() => setTab('reminders')} style={{ cursor: 'pointer' }}>🔔 Hatırlatmalar</li>
+                <li onClick={() => setTab('weather')} style={{ cursor: 'pointer' }}>🌤️ Hava Durumu</li>
+                <li onClick={() => setTab('reports')} style={{ cursor: 'pointer' }}>📊 Raporlar</li>
+                <li onClick={() => setTab('settings')} style={{ cursor: 'pointer' }}>⚙️ Ayarlar</li>
+              </ul>
+            </div>
+
+            <div className="footer-section">
+              <h4 className="footer-heading">İletişim</h4>
+              <ul className="footer-links">
+                <li>
+                  <a href={`mailto:${loadSettings().profile.siteEmail || 'info@akillibahce.com'}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                    📧 {loadSettings().profile.siteEmail || 'info@akillibahce.com'}
+                  </a>
+                </li>
+                <li>
+                  <a href={`https://${loadSettings().profile.siteWebsite || 'www.akillibahce.com'}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                    🌐 {loadSettings().profile.siteWebsite || 'www.akillibahce.com'}
+                  </a>
+                </li>
+                {(() => {
+                  const whatsappNumber = loadSettings().profile.siteWhatsApp;
+                  if (whatsappNumber && whatsappNumber.trim()) {
+                    const cleanNumber = whatsappNumber.replace(/[\s\-()]/g, '');
+                    const message = encodeURIComponent(`Merhaba! ${loadSettings().profile.siteTitle || 'Akıllı Bahçe'} hakkında bilgi almak istiyorum.`);
+                    return (
+                      <li>
+                        <a href={`https://wa.me/${cleanNumber}?text=${message}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                          📱 WhatsApp Destek
+                        </a>
+                      </li>
+                    );
+                  } else {
+                    return (
+                      <li style={{ cursor: 'pointer' }} onClick={() => setTab('settings')}>
+                        💬 Destek Talebi
+                      </li>
+                    );
+                  }
+                })()}
+              </ul>
+            </div>
+          </div>
+
+          <div className="footer-bottom">
+            <p>&copy; 2025 {loadSettings().profile.siteTitle || 'Akıllı Bahçe'} Yönetim Sistemi. Tüm hakları saklıdır.</p>
+            <p className="footer-credits">Doğayla uyum içinde yaşamak için tasarlandı 🌿</p>
+          </div>
+        </div>
+      </footer>
+
+      {/* Scroll to Top Butonu */}
+      {showScrollTop && (
+        <button
+          className="scroll-to-top-btn"
+          onClick={scrollToTop}
+          title="Yukarı Çık"
+          aria-label="Yukarı Çık"
+        >
+          ⬆️
+        </button>
+      )}
+
+      {/* Sohbet Widget Butonu */}
+      <button
+        className="chat-widget-btn"
+        onClick={() => setShowChatWidget(!showChatWidget)}
+        title="Canlı Destek"
+        aria-label="Canlı Destek"
+      >
+        💬
+      </button>
+
+      {/* Sohbet Widget Modal */}
+      {showChatWidget && (
+        <div className="chat-widget-modal">
+          <div className="chat-widget-header">
+            <h3>💬 Canlı Destek</h3>
+            <button
+              className="chat-close-btn"
+              onClick={() => setShowChatWidget(false)}
+              aria-label="Kapat"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="chat-widget-body">
+            <p className="chat-welcome">Merhaba! 👋</p>
+            <p className="chat-info">{loadSettings().profile.siteTitle || 'Akıllı Bahçe'} destek ekibine hoş geldiniz.</p>
+            <p className="chat-info">Size nasıl yardımcı olabiliriz?</p>
+            <div className="chat-contact-options">
+              <a href={`mailto:${loadSettings().profile.siteEmail || 'info@akillibahce.com'}`} className="chat-option">
+                📧 E-posta Gönder
+              </a>
+              {(() => {
+                const whatsappNumber = loadSettings().profile.siteWhatsApp;
+                if (whatsappNumber && whatsappNumber.trim()) {
+                  // Numaradan boşluk, tire vb. karakterleri temizle
+                  const cleanNumber = whatsappNumber.replace(/[\s\-\(\)]/g, '');
+                  // Önceden tanımlı mesaj
+                  const message = encodeURIComponent(`Merhaba! ${loadSettings().profile.siteTitle || 'Akıllı Bahçe'} hakkında bilgi almak istiyorum.`);
+                  return (
+                    <a
+                      href={`https://wa.me/${cleanNumber}?text=${message}`}
+                      className="chat-option"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      📱 WhatsApp ile İletişim
+                    </a>
+                  );
+                } else {
+                  return (
+                    <a href="#" className="chat-option" onClick={(e) => { e.preventDefault(); alert('WhatsApp numarası ayarlardan eklenebilir! (Ayarlar → Profil & Kişiselleştirme)'); }}>
+                      📱 WhatsApp
+                    </a>
+                  );
+                }
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
