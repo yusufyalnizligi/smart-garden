@@ -44,6 +44,9 @@ export default function GardenMapTab({ token }) {
     const [selectedItem, setSelectedItem] = useState(null);
     const [itemToPlace, setItemToPlace] = useState(null); // Yeni eklenecek öğe için
     const [mapLayer, setMapLayer] = useState('google-hybrid'); // 'street', 'satellite' or 'google-hybrid'
+    const [unplacedPanelOpen, setUnplacedPanelOpen] = useState(false); // Konumsuz öğeler paneli kapalı başlasın
+    const [isEditMode, setIsEditMode] = useState(false); // Düzenleme modu (varsayılan: kapalı)
+    const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, lat: 0, lng: 0, view: 'main' }); // view: 'main' | 'tree-list'
 
     // Harita referansları
     const mapContainerRef = useRef(null);
@@ -55,6 +58,7 @@ export default function GardenMapTab({ token }) {
 
     // Click Handler Reference (Closure sorununu aşmak için)
     const handleMapClickRef = useRef((e) => { });
+    const isEditModeRef = useRef(isEditMode); // Edit mode ref (stale closure önleme)
 
     // Verileri çek
     useEffect(() => {
@@ -222,6 +226,128 @@ export default function GardenMapTab({ token }) {
         }
     };
 
+    const handleGetDirections = () => {
+        if (!gardenData || !gardenData.center) {
+            alert('Bahçe konumu bulunamadı!');
+            return;
+        }
+        const { lat, lng } = gardenData.center;
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+        window.open(url, '_blank');
+    };
+
+
+
+    const handleAddTreeFromMenu = async () => {
+        // Konumsuz ağaçları bul
+        const unplacedTrees = unplacedItems.filter(i => i.type === 'tree');
+
+        if (unplacedTrees.length > 0) {
+            setContextMenu(prev => ({ ...prev, view: 'tree-list' }));
+        } else {
+            handleCreateNewTree();
+        }
+    };
+
+    const handleCreateNewTree = async () => {
+        setContextMenu(prev => ({ ...prev, visible: false }));
+        const name = prompt("Yeni Ağaç Adı:");
+        if (!name) return;
+
+        try {
+            const { lat, lng } = contextMenu;
+            await fetch(`${API_URL}/trees`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name,
+                    count: 1,
+                    category: 'Genel', // Varsayılan
+                    locations: [{ lat, lng, count: 1 }]
+                })
+            });
+            fetchDataForUpdate();
+            alert('Yeni ağaç oluşturuldu ve eklendi!');
+        } catch (err) {
+            console.error(err);
+            alert('Ağaç eklenemedi!');
+        }
+    };
+
+    const handleAddVegFromMenu = async () => {
+        const unplacedVeggies = unplacedItems.filter(i => i.type === 'vegetable');
+        if (unplacedVeggies.length > 0) {
+            setContextMenu(prev => ({ ...prev, view: 'veg-list' }));
+        } else {
+            handleCreateNewVeg();
+        }
+    };
+
+    const handleCreateNewVeg = async () => {
+        setContextMenu(prev => ({ ...prev, visible: false }));
+        const name = prompt("Yeni Sebze Adı:");
+        if (!name) return;
+
+        try {
+            const { lat, lng } = contextMenu;
+            await fetch(`${API_URL}/vegetables`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name,
+                    count: 1,
+                    category: 'Genel', // Varsayılan
+                    locations: [{ lat, lng, count: 1 }]
+                })
+            });
+            fetchDataForUpdate();
+            alert('Yeni sebze oluşturuldu ve eklendi!');
+        } catch (err) {
+            console.error(err);
+            alert('Sebze eklenemedi!');
+        }
+    };
+
+    const handlePlaceUnplacedItem = async (item) => {
+        setContextMenu(prev => ({ ...prev, visible: false }));
+        try {
+            const { lat, lng } = contextMenu;
+            // updateItemLocation fonksiyonunu kullan (konum ekleme mantığı aynı)
+            await updateItemLocation(item.id, item.type, lat, lng);
+        } catch (err) {
+            console.error(err);
+            alert('Konum eklenemedi!');
+        }
+    };
+
+    const handleAddLabelFromMenu = async () => {
+        setContextMenu(prev => ({ ...prev, visible: false }));
+        const text = prompt("Etiket Metni:");
+        if (!text) return;
+
+        try {
+            const { lat, lng } = contextMenu;
+            await fetch(`${API_URL}/map/custom-labels`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ text, lat, lng })
+            });
+            fetchDataForUpdate();
+        } catch (err) {
+            console.error(err);
+            alert('Etiket eklenemedi!');
+        }
+    };
+
     // --- Effects ---
 
     // Haritayı manuel olarak başlat (init)
@@ -243,25 +369,23 @@ export default function GardenMapTab({ token }) {
         // NOT: Ref.current'ı arrow function ile çağırıyoruz ki güncel değeri alsın
         map.on('click', (e) => handleMapClickRef.current(e));
 
-        // Sağ Tık: Özel Etiket Ekle
-        map.on('contextmenu', async (e) => {
-            const text = prompt("Etiket ismini girin:");
-            if (!text) return;
+        // Sağ Tık: Özel Menü Aç (Sadece Düzenleme Modunda)
+        map.on('contextmenu', (e) => {
+            if (!isEditModeRef.current) return; // View mode'da çalışmasın
 
-            try {
-                await fetch(`${API_URL}/map/custom-labels`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ text, lat: e.latlng.lat, lng: e.latlng.lng })
-                });
-                fetchDataForUpdate();
-            } catch (err) {
-                console.error(err);
-                alert('Etiket eklenemedi!');
-            }
+            setContextMenu({
+                visible: true,
+                x: e.containerPoint.x,
+                y: e.containerPoint.y,
+                lat: e.latlng.lat,
+                lng: e.latlng.lng,
+                view: 'main' // Her açılışta ana menüye dön
+            });
+        });
+
+        // Haritaya tıklayınca menüyü kapat
+        map.on('click', () => {
+            setContextMenu(prev => ({ ...prev, visible: false }));
         });
 
         map.on('locationfound', (e) => {
@@ -325,10 +449,12 @@ export default function GardenMapTab({ token }) {
             <span style="font-size: 0.85em; color: #666; margin-left: 5px;">(Toplam: ${item.totalCount})</span>
           </p>
           ${item.notes ? `<p>${item.notes}</p>` : ''}
+          ${isEditMode ? `
           <div id="popup-actions-${item.id}">
              <button class="popup-btn-move" data-id="${item.id}" data-type="${item.type}">📍 Konumu Taşı</button>
              <button class="popup-btn-remove" data-id="${item.id}" data-type="${item.type}" style="margin-left: 5px; color: red;">🗑️ Konumu Sil</button>
           </div>
+          ` : ''}
         </div>
       `;
             marker.bindPopup(popupContent);
@@ -356,7 +482,12 @@ export default function GardenMapTab({ token }) {
             marker.bindPopup(`
                 <div style="text-align:center;">
                     <strong>${label.text}</strong><br/>
-                    <button class="popup-btn-delete-label" data-id="${label._id}" style="color:red; margin-top:5px; border:1px solid red; background:white; cursor:pointer; padding:2px 5px; border-radius:3px;">🗑️ Sil</button>
+                    ${isEditMode ? `
+                        <div style="margin-top:5px;">
+                             <button class="popup-btn-edit-label" data-id="${label._id}" data-text="${label.text}" style="color:blue; border:1px solid blue; background:white; cursor:pointer; padding:2px 5px; border-radius:3px; margin-right:5px;">✏️ Düzenle</button>
+                             <button class="popup-btn-delete-label" data-id="${label._id}" style="color:red; border:1px solid red; background:white; cursor:pointer; padding:2px 5px; border-radius:3px;">🗑️ Sil</button>
+                        </div>
+                    ` : ''}
                 </div>
             `);
             markersRef.current.push(marker);
@@ -386,6 +517,33 @@ export default function GardenMapTab({ token }) {
                     const type = evt.target.getAttribute('data-type');
                     removeLocation(id, type);
                     map.closePopup();
+                };
+            }
+
+
+
+            // Etiket Düzenleme Butonu
+            const btnEditLabel = document.querySelector('.popup-btn-edit-label');
+            if (btnEditLabel) {
+                btnEditLabel.onclick = async (evt) => {
+                    const id = evt.target.getAttribute('data-id');
+                    const oldText = evt.target.getAttribute('data-text');
+
+                    const newText = prompt("Yeni etiket metni:", oldText);
+                    if (newText && newText !== oldText) {
+                        try {
+                            await fetch(`${API_URL}/map/custom-labels/${id}`, {
+                                method: 'PATCH',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({ text: newText })
+                            });
+                            map.closePopup();
+                            fetchDataForUpdate();
+                        } catch (err) { console.error(err); alert('Etiket güncellenemedi'); }
+                    }
                 };
             }
 
@@ -419,7 +577,7 @@ export default function GardenMapTab({ token }) {
             }).addTo(map);
         }
 
-    }, [mapItems, gardenData?.boundaries, customLabels]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [mapItems, gardenData?.boundaries, customLabels, isEditMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Click Handler ref update
     useEffect(() => {
@@ -442,6 +600,11 @@ export default function GardenMapTab({ token }) {
         };
     }, [mode, selectedItem, gardenData, itemToPlace]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // isEditMode ref'i güncelle (stale closure sorunu için)
+    useEffect(() => {
+        isEditModeRef.current = isEditMode;
+    }, [isEditMode]);
+
 
     if (loading || !gardenData) {
         return (
@@ -456,20 +619,32 @@ export default function GardenMapTab({ token }) {
         <div style={{ position: 'relative', height: '100%', width: '100%' }}>
             {/* Harita Kontrolleri */}
             <div className="map-toolbar">
-                <button className={`toolbar-btn ${mapLayer === 'street' ? 'active' : ''}`} onClick={() => setMapLayer('street')} title="Sokak Görünümü">🗺️</button>
-                <button className={`toolbar-btn ${mapLayer === 'satellite' ? 'active' : ''}`} onClick={() => setMapLayer('satellite')} title="Uydu Görünümü">🛰️</button>
                 <button className={`toolbar-btn ${mapLayer === 'google-hybrid' ? 'active' : ''}`} onClick={() => setMapLayer('google-hybrid')} title="Google Hibrit">🌍</button>
                 <div className="toolbar-separator"></div>
                 <button className="toolbar-btn" onClick={handleGoToGarden} title="Bahçem">🏡</button>
                 <button className="toolbar-btn" onClick={handleLocateUser} title="Konumumu Bul">📍</button>
-                <button className={`toolbar-btn ${mode === 'view' ? 'active' : ''}`} onClick={() => setMode('view')} title="Görüntüleme Modu">👁️</button>
-                <button className={`toolbar-btn ${mode === 'draw-boundary' ? 'active' : ''}`} onClick={() => setMode('draw-boundary')} title="Bahçe Sınırı Çiz">📐</button>
-                <button className="toolbar-btn" onClick={() => { if (window.confirm('Sınırları sil?')) updateGardenBoundaries([]); }} title="Sınırları Temizle">🗑️</button>
+                <button className="toolbar-btn" onClick={handleGetDirections} title="Yol Tarifi Al">🚗</button>
+                <div className="toolbar-separator"></div>
+                <button
+                    className={`toolbar-btn ${isEditMode ? 'active' : ''}`}
+                    onClick={() => setIsEditMode(!isEditMode)}
+                    title={isEditMode ? "Düzenleme Modu Aktif" : "Görüntüleme Modu (Tıkla: Düzenle)"}
+                    style={{
+                        background: isEditMode ? '#e8f5e9' : '#f5f5f5',
+                        borderColor: isEditMode ? '#4caf50' : '#ccc',
+                        color: isEditMode ? '#2e7d32' : '#666'
+                    }}
+                >
+                    {isEditMode ? '✏️' : '🔒'}
+                </button>
             </div>
 
             <div className="garden-info-panel">
-                <div className={`mode-indicator mode-${mode}`}>
-                    {mode === 'view' ? 'Görüntüleme Modu' : mode === 'edit-location' ? 'Konum Seçme Modu' : mode === 'place-item' ? 'Konum Ekleme Modu' : 'Sınır Çizme Modu'}
+                <div className={`mode-indicator mode-${mode}`} style={{
+                    background: isEditMode ? '#e8f5e9' : '#f5f5f5',
+                    color: isEditMode ? '#2e7d32' : '#666'
+                }}>
+                    {isEditMode ? '✏️ Düzenleme Modu' : '🔒 Görüntüleme Modu'}
                 </div>
                 <div className="garden-stat"><strong>Bahçe:</strong> {gardenData.name}</div>
                 <div className="garden-stat"><strong>Öğe:</strong> {mapItems.length}</div>
@@ -480,19 +655,35 @@ export default function GardenMapTab({ token }) {
             {/* Unplaced Items Sidebar */}
             {unplacedItems.length > 0 && (
                 <div className="unplaced-items-panel">
-                    <h4>Konumsuz Öğeler ({unplacedItems.length})</h4>
-                    <div className="unplaced-list">
-                        {unplacedItems.map(item => (
-                            <div key={item.id} className="unplaced-item" onClick={() => {
-                                setItemToPlace(item);
-                                setMode('place-item');
-                                alert(`"${item.name}" için haritada bir yere tıklayın.`);
-                            }}>
-                                <span>{item.type === 'tree' ? '🌳' : '🥕'} {item.name} ({item.count})</span>
-                                <small>Ekle +</small>
-                            </div>
-                        ))}
-                    </div>
+                    <h4
+                        onClick={() => setUnplacedPanelOpen(!unplacedPanelOpen)}
+                        style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                        <span style={{ fontSize: '0.8em' }}>{unplacedPanelOpen ? '▼' : '▶'}</span>
+                        Konumsuz Öğeler ({unplacedItems.length})
+                    </h4>
+                    {unplacedPanelOpen && (
+                        <div className="unplaced-list">
+                            {unplacedItems.map(item => (
+                                <div
+                                    key={item.id}
+                                    className="unplaced-item"
+                                    onClick={isEditMode ? () => {
+                                        setItemToPlace(item);
+                                        setMode('place-item');
+                                        alert(`"${item.name}" için haritada bir yere tıklayın.`);
+                                    } : undefined}
+                                    style={{
+                                        cursor: isEditMode ? 'pointer' : 'not-allowed',
+                                        opacity: isEditMode ? 1 : 0.6
+                                    }}
+                                >
+                                    <span>{item.type === 'tree' ? '🌳' : '🥕'} {item.name} ({item.count})</span>
+                                    <small>Ekle +</small>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -502,6 +693,91 @@ export default function GardenMapTab({ token }) {
                 ref={mapContainerRef}
                 style={{ height: '90%', width: '100%' }}
             />
-        </div>
+
+            {/* Custom Context Menu */}
+            {contextMenu.visible && (
+                <div style={{
+                    position: 'absolute',
+                    top: contextMenu.y,
+                    left: contextMenu.x,
+                    background: 'white',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+                    zIndex: 1000,
+                    padding: '5px 0',
+                    minWidth: '200px',
+                    maxHeight: '300px',
+                    overflowY: 'auto'
+                }}>
+                    {contextMenu.view === 'main' ? (
+                        <>
+                            <div
+                                onClick={handleAddTreeFromMenu}
+                                style={{ padding: '8px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
+                                onMouseLeave={(e) => e.target.style.background = 'white'}
+                            >
+                                🌳 Ağaç Ekle
+                            </div>
+                            <div
+                                onClick={handleAddVegFromMenu}
+                                style={{ padding: '8px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
+                                onMouseLeave={(e) => e.target.style.background = 'white'}
+                            >
+                                🥕 Sebze Ekle
+                            </div>
+                            <div
+                                onClick={handleAddLabelFromMenu}
+                                style={{ padding: '8px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
+                                onMouseLeave={(e) => e.target.style.background = 'white'}
+                            >
+                                🏷️ Özel Etiket Ekle
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div
+                                onClick={() => setContextMenu(prev => ({ ...prev, view: 'main' }))}
+                                style={{ padding: '8px 15px', cursor: 'pointer', borderBottom: '1px solid #eee', color: '#666', fontSize: '0.9em' }}
+                                onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
+                                onMouseLeave={(e) => e.target.style.background = 'white'}
+                            >
+                                ⬅️ Geri
+                            </div>
+
+                            <div style={{ padding: '5px 15px', fontSize: '0.85em', color: '#999', fontWeight: 'bold' }}>
+                                {contextMenu.view === 'tree-list' ? 'AĞAÇLAR:' : 'SEBZELER:'}
+                            </div>
+
+                            {unplacedItems.filter(i => i.type === (contextMenu.view === 'tree-list' ? 'tree' : 'vegetable')).map(item => (
+                                <div
+                                    key={item.id}
+                                    onClick={() => handlePlaceUnplacedItem(item)}
+                                    style={{ padding: '8px 15px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}
+                                    onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
+                                    onMouseLeave={(e) => e.target.style.background = 'white'}
+                                >
+                                    <span>{item.name}</span>
+                                    <span style={{ color: 'green', fontWeight: 'bold' }}>+{item.count}</span>
+                                </div>
+                            ))}
+
+                            <div style={{ borderTop: '1px solid #eee', marginTop: '5px' }}></div>
+                            <div
+                                onClick={contextMenu.view === 'tree-list' ? handleCreateNewTree : handleCreateNewVeg}
+                                style={{ padding: '8px 15px', cursor: 'pointer', color: '#007bff' }}
+                                onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
+                                onMouseLeave={(e) => e.target.style.background = 'white'}
+                            >
+                                ➕ Yeni Oluştur...
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
+        </div >
     );
 }

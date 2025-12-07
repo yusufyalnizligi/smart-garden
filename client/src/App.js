@@ -2285,7 +2285,7 @@ function VegetableManager({ token }) {
         </div>
 
         <div style={{ fontSize: '0.85rem', color: '#666', marginRight: 'auto' }}>
-          {filteredVeggies.filter(v => (v.count || 0) > 0).length} sebze
+          {filteredVeggies.reduce((sum, v) => sum + (v.count || 0), 0)} sebze
         </div>
 
         <button className="btn primary" onClick={handleCreate}>
@@ -2910,7 +2910,7 @@ function TreeManager({ token }) {
         </div>
 
         <div style={{ fontSize: '0.85rem', color: '#666', marginRight: 'auto' }}>
-          {filteredTrees.filter(t => (t.count || 0) > 0).length} ağaç
+          {filteredTrees.reduce((sum, t) => sum + (t.count || 0), 0)} ağaç
         </div>
 
         <button className="btn primary" onClick={handleCreate}>

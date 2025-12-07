@@ -2001,7 +2001,7 @@ app.post('/api/push/send-reminders', authMiddleware, async (req, res) => {
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
       data: {
-        url: '/reminders',
+        url: '',
         month: m
       }
     });
@@ -2130,7 +2130,7 @@ app.post(
         icon: '/icons/icon-192.png',
         badge: '/icons/icon-192.png',
         data: {
-          url: '/reminders',
+          url: '',
           month: m
         }
       });
@@ -2166,6 +2166,31 @@ app.post(
     }
   }
 );
+
+// Özel Etiket Güncelle (PATCH)
+app.patch('/api/map/custom-labels/:id', authMiddleware, async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ message: 'Etiket metni gereklidir.' });
+    }
+
+    const label = await CustomLabel.findByIdAndUpdate(
+      req.params.id,
+      { text },
+      { new: true } // Güncellenmiş belgeyi döndür
+    );
+
+    if (!label) {
+      return res.status(404).json({ message: 'Etiket bulunamadı.' });
+    }
+
+    res.json(label);
+  } catch (err) {
+    console.error('Etiket güncelleme hatası:', err);
+    res.status(500).json({ message: 'Etiket güncellenemedi.' });
+  }
+});
 /* -------------------- Bakım Raporu (Geçmiş / Özet) -------------------- */
 
 /* -------------------- Bakım Raporu (Geçmiş / Özet) -------------------- */
