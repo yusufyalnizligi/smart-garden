@@ -329,4 +329,15 @@
     padding: 2px 5px;
     border-radius: 4px;
     white-space: nowrap;
+
+}
+
+@media (max-width: 768px) {
+    .garden-info-panel {
+        bottom: 80px;
+    }
+
+    .unplaced-items-panel {
+        display: none;
+    }
 }
