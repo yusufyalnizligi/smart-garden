@@ -297,6 +297,14 @@ const adminSchema = new mongoose.Schema({
       gardenName: { type: String, default: '' },
       gardenSize: { type: Number, default: 0 }, // m²
       experienceLevel: { type: String, default: 'beginner' }, // beginner, intermediate, advanced
+
+      // Site Ayarları
+      siteTitle: { type: String, default: 'Akıllı Bahçe' },
+      siteDescription: { type: String, default: '' },
+      siteEmail: { type: String, default: '' },
+      siteWebsite: { type: String, default: '' },
+      siteWhatsApp: { type: String, default: '' },
+
       location: {
         lat: { type: Number, default: 0 },
         lng: { type: Number, default: 0 }
@@ -1603,6 +1611,67 @@ app.get('/api/reminders/:month', authMiddleware, async (req, res) => {
     res.json({ month, reminders });
   } catch (err) {
     console.error('Hatırlatma hatası:', err);
+    res.status(500).json({ message: 'Sunucu hatası.' });
+  }
+});
+
+
+// Geçmiş hatırlatmalar (TAMAMLANMIŞ GÖREVLER)
+app.get('/api/reminders/history/:month', authMiddleware, async (req, res) => {
+  const month = parseInt(req.params.month, 10);
+
+  if (Number.isNaN(month) || month < 1 || month > 12) {
+    return res.status(400).json({ message: 'Ay 1 ile 12 arasında olmalı.' });
+  }
+
+  try {
+    // Tamamlanmış ağaç bakımlarını bul
+    const trees = await Tree.find({
+      maintenance: { $elemMatch: { month, completed: true } }
+    });
+
+    // Tamamlanmış sebze bakımlarını bul
+    const vegetables = await Vegetable.find({
+      maintenance: { $elemMatch: { month, completed: true } }
+    });
+
+    const history = [];
+
+    // Ağaçları ekle
+    trees.forEach((tree) => {
+      const completedTasks = (tree.maintenance || [])
+        .filter((m) => m.month === month && m.completed)
+        .map((m) => m.tasks);
+
+      if (completedTasks.length > 0) {
+        history.push({
+          id: tree._id,
+          type: 'tree',
+          name: tree.name,
+          tasks: completedTasks
+        });
+      }
+    });
+
+    // Sebzeleri ekle
+    vegetables.forEach((veg) => {
+      const completedTasks = (veg.maintenance || [])
+        .filter((m) => m.month === month && m.completed)
+        .map((m) => m.tasks);
+
+      if (completedTasks.length > 0) {
+        history.push({
+          id: veg._id,
+          type: 'vegetable',
+          name: veg.name,
+          tasks: completedTasks
+        });
+      }
+    });
+
+    res.json({ month, history });
+  } catch (err) {
+    console.error('Geçmiş hatırlatma hatası:', err);
     res.status(500).json({ message: 'Sunucu hatası.' });
   }
 });

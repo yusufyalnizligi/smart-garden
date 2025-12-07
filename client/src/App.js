@@ -449,6 +449,7 @@ function WeatherTab({ token }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [now, setNow] = useState(new Date());
+  const [showContent, setShowContent] = useState(false); // Minimum 1 saniye gösterim için
 
   // Ay isimleri / gün isimleri
   const dayNames = [
@@ -493,6 +494,9 @@ function WeatherTab({ token }) {
     const fetchExtended = async () => {
       setLoading(true);
       setError('');
+      setShowContent(false); // İçeriği gizle
+      const startTime = Date.now(); // Başlangıç zamanını kaydet
+
       try {
         const res = await fetch(
           `${API_URL}/weather/extended?city=${encodeURIComponent(city)}`,
@@ -511,6 +515,8 @@ function WeatherTab({ token }) {
           json.message.toLowerCase().includes('token')
         ) {
           setError('Oturum süren dolmuş veya token geçersiz. Lütfen tekrar giriş yap.');
+          setLoading(false);
+          setShowContent(true);
           return;
         }
 
@@ -518,13 +524,22 @@ function WeatherTab({ token }) {
           throw new Error(json.message || 'Hava durumu alınamadı.');
         }
 
-
         setData(json);
+
+        // Minimum 1 saniye gösterim süresi
+        const elapsedTime = Date.now() - startTime;
+        const remainingTime = Math.max(1000 - elapsedTime, 0);
+
+        setTimeout(() => {
+          setShowContent(true);
+          setLoading(false);
+        }, remainingTime);
+
       } catch (err) {
         if (err.name === 'AbortError') return;
         setError(err.message || 'Hava durumu alınamadı.');
-      } finally {
         setLoading(false);
+        setShowContent(true); // Hata durumunda da içeriği göster
       }
     };
 
@@ -540,35 +555,7 @@ function WeatherTab({ token }) {
     return () => clearInterval(id);
   }, []);
 
-  const handleCitySelectChange = async (e) => {
-    const value = e.target.value;
-    setCity(value);
-    try {
-      localStorage.setItem('sg_city', value);
-      // Ayarlara da kaydet (API + localStorage'daki settings)
-      const currentSettings = loadSettings();
-      const updatedSettings = {
-        ...currentSettings,
-        weather: { ...currentSettings.weather, city: value }
-      };
-      saveSettings(updatedSettings);
 
-      // API'ye de kaydet
-      fetch(`${API_URL}/settings`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ path: 'weather.city', value })
-      }).catch((err) => console.warn('API settings update failed:', err));
-
-      // Header'daki widget'ı da güncelle
-      window.dispatchEvent(new Event('sg-city-changed'));
-    } catch (err) {
-      console.warn('Şehir ayarı kaydedilemedi:', err);
-    }
-  };
 
   if (!token) {
     return (
@@ -712,16 +699,16 @@ function WeatherTab({ token }) {
   return (
     <div className="weather-page">
       {/* Üst başlık + saat + tarih + şehir seçimi */}
-      <div className="weather-page-header">
+      <div className="modern-tab-header weather">
         <div>
-          <h2>Hava Durumu</h2>
-          <p className="muted">
-            Ayrıntılı hava durumu, UV indeksi, hava kalitesi ve tahminler.
+          <h2>🌤️ Hava Durumu </h2>
+          <p className="subtitle">
+            Ayrıntılı hava durumu, UV indeksi, hava kalitesi, harita ve tahminler
           </p>
         </div>
         <div className="weather-page-header-right">
 
-          <select
+          {/*  <select
             className="settings-select weather-city-select"
             value={city}
             onChange={handleCitySelectChange}
@@ -732,19 +719,20 @@ function WeatherTab({ token }) {
             <option value="Izmir">İzmir</option>
             <option value="Bursa">Bursa</option>
             <option value="Antalya">Antalya</option>
-          </select>
+          </select>*/}
         </div>
       </div>
 
       {error && <div className="error-text">{error}</div>}
 
-      {loading && !hasData && (
-        <div className="card">
+      {loading && !showContent && (
+        <div className="weather-loading">
+          <div className="weather-spinner"></div>
           <p>Hava durumu yükleniyor...</p>
         </div>
       )}
 
-      {hasData && (
+      {showContent && hasData && (
         <>
           {/* Ana panel: sıcaklık, hissedilen, UV, rüzgar pusulası, hava kalitesi */}
           <div className="weather-main-grid">
@@ -1990,6 +1978,10 @@ function VegetableManager({ token }) {
 
   // Görünüm modunu al
   const [viewMode, setViewMode] = useState('card');
+
+  // Mobile filter collapse
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
   useEffect(() => {
     const settings = loadSettings();
     setViewMode(settings.appearance?.viewMode || 'card');
@@ -2237,60 +2229,73 @@ function VegetableManager({ token }) {
 
   return (
     <div>
-      <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-        <h2>Sebzeler</h2>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
-          <label style={{ fontWeight: 'bold' }}>Ara:</label>
-          <input
-            type="text"
-            placeholder="İsim ara..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="settings-select"
-            style={{ width: '120px' }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
-          <label style={{ fontWeight: 'bold' }}>Kategori:</label>
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="settings-select"
-          >
-            <option value="all">Tümü</option>
-            {Object.entries(VEGETABLE_CATEGORY_LABELS)
-              .filter(([key]) => veggies.some(v => v.category === key))
-              .map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))
-            }
-          </select>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
-          <label style={{ fontWeight: 'bold' }}>Sırala:</label>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            class="settings-select"
-          >
-            <option value="name-asc">İsim (A-Z)</option>
-            <option value="name-desc">İsim (Z-A)</option>
-            <option value="date-new">Tarih (Yeni-Eski)</option>
-            <option value="date-old">Tarih (Eski-Yeni)</option>
-            <option value="category">Kategoriye Göre</option>
-          </select>
-        </div>
-
-        <div style={{ fontSize: '0.85rem', color: '#666', marginRight: 'auto' }}>
-          {filteredVeggies.reduce((sum, v) => sum + (v.count || 0), 0)} sebze
-        </div>
-
-        <button className="btn primary" onClick={handleCreate}>
-          + Yeni Sebze
+      <div className="modern-section-card" style={{ marginBottom: '20px' }}>
+        {/* Mobile filter toggle button */}
+        <button
+          className="mobile-filter-toggle"
+          onClick={() => setIsFilterOpen(!isFilterOpen)}
+          aria-label="Filtreleri aç/kapat"
+        >
+          <span>{isFilterOpen ? '▼' : '▶'} Filtreler</span>
+          <span className="filter-badge">{filteredVeggies.reduce((sum, v) => sum + (v.count || 0), 0)} sebze</span>
         </button>
+
+        {/* Filter content - collapsible on mobile */}
+        <div className={`filter-content ${isFilterOpen ? 'open' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+            <label style={{ fontWeight: 'bold' }}>Ara:</label>
+            <input
+              type="text"
+              placeholder="İsim ara..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="settings-select"
+              style={{ width: '120px' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+            <label style={{ fontWeight: 'bold' }}>Kategori:</label>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="settings-select"
+            >
+              <option value="all">Tümü</option>
+              {Object.entries(VEGETABLE_CATEGORY_LABELS)
+                .filter(([key]) => veggies.some(v => v.category === key))
+                .map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))
+              }
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+            <label style={{ fontWeight: 'bold' }}>Sırala:</label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="settings-select"
+            >
+              <option value="name-asc">İsim (A-Z)</option>
+              <option value="name-desc">İsim (Z-A)</option>
+              <option value="date-new">Tarih (Yeni-Eski)</option>
+              <option value="date-old">Tarih (Eski-Yeni)</option>
+              <option value="category">Kategoriye Göre</option>
+            </select>
+          </div>
+
+          <div style={{ fontSize: '0.85rem', color: '#666', marginRight: 'auto' }} className="desktop-count">
+            {filteredVeggies.reduce((sum, v) => sum + (v.count || 0), 0)} sebze
+          </div>
+
+          <button className="btn primary" onClick={handleCreate}>
+            + Yeni Sebze
+          </button>
+        </div>
       </div>
 
       {loading && <p>Yükleniyor...</p>}
@@ -2615,6 +2620,10 @@ function TreeManager({ token }) {
 
   // Görünüm modunu al
   const [viewMode, setViewMode] = useState('card');
+
+  // Mobile filter collapse
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
   useEffect(() => {
     const settings = loadSettings();
     setViewMode(settings.appearance?.viewMode || 'card');
@@ -2863,59 +2872,72 @@ function TreeManager({ token }) {
 
   return (
     <div>
-      <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-        <h2>Ağaçlar</h2>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
-          <label style={{ fontWeight: 'bold' }}>Ara:</label>
-          <input
-            type="text"
-            placeholder="İsim ara..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="settings-select"
-            style={{ width: '120px' }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
-          <label style={{ fontWeight: 'bold' }}>Kategori:</label>
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="settings-select"
-          >
-            <option value="all">Tümü</option>
-            {Object.entries(TREE_CATEGORY_LABELS)
-              .filter(([key]) => trees.some(t => t.category === key))
-              .map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))
-            }
-          </select>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
-          <label style={{ fontWeight: 'bold' }}>Sırala:</label>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            class="settings-select" >
-            <option value="name-asc">İsim (A-Z)</option>
-            <option value="name-desc">İsim (Z-A)</option>
-            <option value="date-new">Tarih (Yeni-Eski)</option>
-            <option value="date-old">Tarih (Eski-Yeni)</option>
-            <option value="category">Kategoriye Göre</option>
-          </select>
-        </div>
-
-        <div style={{ fontSize: '0.85rem', color: '#666', marginRight: 'auto' }}>
-          {filteredTrees.reduce((sum, t) => sum + (t.count || 0), 0)} ağaç
-        </div>
-
-        <button className="btn primary" onClick={handleCreate}>
-          + Yeni Ağaç
+      <div className="modern-section-card" style={{ marginBottom: '20px' }}>
+        {/* Mobile filter toggle button */}
+        <button
+          className="mobile-filter-toggle"
+          onClick={() => setIsFilterOpen(!isFilterOpen)}
+          aria-label="Filtreleri aç/kapat"
+        >
+          <span>{isFilterOpen ? '▼' : '▶'} Filtreler</span>
+          <span className="filter-badge">{filteredTrees.reduce((sum, t) => sum + (t.count || 0), 0)} ağaç</span>
         </button>
+
+        {/* Filter content - collapsible on mobile */}
+        <div className={`filter-content ${isFilterOpen ? 'open' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+            <label style={{ fontWeight: 'bold' }}>Ara:</label>
+            <input
+              type="text"
+              placeholder="İsim ara..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="settings-select"
+              style={{ width: '120px' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+            <label style={{ fontWeight: 'bold' }}>Kategori:</label>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="settings-select"
+            >
+              <option value="all">Tümü</option>
+              {Object.entries(TREE_CATEGORY_LABELS)
+                .filter(([key]) => trees.some(t => t.category === key))
+                .map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))
+              }
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+            <label style={{ fontWeight: 'bold' }}>Sırala:</label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="settings-select" >
+              <option value="name-asc">İsim (A-Z)</option>
+              <option value="name-desc">İsim (Z-A)</option>
+              <option value="date-new">Tarih (Yeni-Eski)</option>
+              <option value="date-old">Tarih (Eski-Yeni)</option>
+              <option value="category">Kategoriye Göre</option>
+            </select>
+          </div>
+
+          <div style={{ fontSize: '0.85rem', color: '#666', marginRight: 'auto' }} className="desktop-count">
+            {filteredTrees.reduce((sum, t) => sum + (t.count || 0), 0)} ağaç
+          </div>
+
+          <button className="btn primary" onClick={handleCreate}>
+            + Yeni Ağaç
+          </button>
+        </div>
       </div>
 
       {loading && <p>Yükleniyor...</p>}
@@ -3033,189 +3055,195 @@ function TreeManager({ token }) {
         })}
       </div>
 
-      {!loading && trees.length === 0 && (
-        <p>Henüz ağaç eklenmemiş. “Yeni Ağaç” ile başlayabilirsin.</p>
-      )}
+      {
+        !loading && trees.length === 0 && (
+          <p>Henüz ağaç eklenmemiş. “Yeni Ağaç” ile başlayabilirsin.</p>
+        )
+      }
 
-      {selectedTree && (
-        <div className="modal-overlay" onClick={closeDetail}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>{selectedTree.name}</h2>
-            <p style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <strong>Adet:</strong>
-              <button
-                onClick={() => {
-                  const newCount = Math.max(0, (selectedTree.count || 0) - 1);
-                  handleQuickUpdate(selectedTree, newCount);
-                }}
-                style={{
-                  padding: '5px 10px',
-                  cursor: 'pointer',
-                  border: '1px solid #ddd',
-                  background: '#f8f9fa',
-                  borderRadius: '4px'
-                }}
-              >
-                -
-              </button>
-              <span style={{ fontWeight: 'bold', minWidth: '30px', textAlign: 'center' }}>
-                {selectedTree.count}
-              </span>
-              <button
-                onClick={() => {
-                  const newCount = (selectedTree.count || 0) + 1;
-                  handleQuickUpdate(selectedTree, newCount);
-                }}
-                style={{
-                  padding: '5px 10px',
-                  cursor: 'pointer',
-                  border: '1px solid #ddd',
-                  background: '#f8f9fa',
-                  borderRadius: '4px'
-                }}
-              >
-                +
-              </button>
-            </p>
-            <p>
-              <strong>Kategori:</strong>{' '}
-              {selectedTree.category || 'Genel'}
-            </p>
-            {selectedTree.notes && (
-              <p>
-                <strong>Not:</strong> {selectedTree.notes}
+      {
+        selectedTree && (
+          <div className="modal-overlay" onClick={closeDetail}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <h2>{selectedTree.name}</h2>
+              <p style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <strong>Adet:</strong>
+                <button
+                  onClick={() => {
+                    const newCount = Math.max(0, (selectedTree.count || 0) - 1);
+                    handleQuickUpdate(selectedTree, newCount);
+                  }}
+                  style={{
+                    padding: '5px 10px',
+                    cursor: 'pointer',
+                    border: '1px solid #ddd',
+                    background: '#f8f9fa',
+                    borderRadius: '4px'
+                  }}
+                >
+                  -
+                </button>
+                <span style={{ fontWeight: 'bold', minWidth: '30px', textAlign: 'center' }}>
+                  {selectedTree.count}
+                </span>
+                <button
+                  onClick={() => {
+                    const newCount = (selectedTree.count || 0) + 1;
+                    handleQuickUpdate(selectedTree, newCount);
+                  }}
+                  style={{
+                    padding: '5px 10px',
+                    cursor: 'pointer',
+                    border: '1px solid #ddd',
+                    background: '#f8f9fa',
+                    borderRadius: '4px'
+                  }}
+                >
+                  +
+                </button>
               </p>
-            )}
+              <p>
+                <strong>Kategori:</strong>{' '}
+                {selectedTree.category || 'Genel'}
+              </p>
+              {selectedTree.notes && (
+                <p>
+                  <strong>Not:</strong> {selectedTree.notes}
+                </p>
+              )}
 
-            {(() => {
-              const currentMonth = new Date().getMonth() + 1;
-              const thisMonth = selectedTree.maintenance?.find(
-                (m) => m.month === currentMonth
-              );
+              {(() => {
+                const currentMonth = new Date().getMonth() + 1;
+                const thisMonth = selectedTree.maintenance?.find(
+                  (m) => m.month === currentMonth
+                );
 
-              return (
-                <div className="this-month-box">
-                  <h4>
-                    Bu Ay Yapılacaklar ({monthNames[currentMonth - 1]})
-                  </h4>
-                  {thisMonth ? (
-                    <p>
-                      {thisMonth.tasks}{' '}
-                      {thisMonth.completed && (
-                        <span className="this-month-done">
-                          ✅ Tamamlandı
-                        </span>
-                      )}
-                    </p>
-                  ) : (
-                    <p>Bu ay için bakım planı yok.</p>
-                  )}
+                return (
+                  <div className="this-month-box">
+                    <h4>
+                      Bu Ay Yapılacaklar ({monthNames[currentMonth - 1]})
+                    </h4>
+                    {thisMonth ? (
+                      <p>
+                        {thisMonth.tasks}{' '}
+                        {thisMonth.completed && (
+                          <span className="this-month-done">
+                            ✅ Tamamlandı
+                          </span>
+                        )}
+                      </p>
+                    ) : (
+                      <p>Bu ay için bakım planı yok.</p>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <h3>Aylık Bakım Planı</h3>
+              {selectedTree.maintenance &&
+                selectedTree.maintenance.length > 0 ? (
+                <div className="maintenance-table-wrapper">
+                  <table className="maintenance-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '100px' }}>Ay</th>
+                        <th style={{ width: '100px' }}>Kategori</th>
+                        <th>Bakım Görevleri</th>
+                        <th style={{ width: '80px', textAlign: 'center' }}>Durum</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedTree.maintenance
+                        .sort((a, b) => a.month - b.month)
+                        .map((m) => {
+                          const text = m.tasks || 'Görev girilmemiş';
+                          const isImportant = /budama|ilaç|sulama|gübre/i.test(text);
+                          const tag = classifyMaintenanceTask(text);
+
+                          return (
+                            <tr
+                              key={m._id || `${selectedTree._id}-${m.month}`}
+                              className={
+                                'maintenance-table-row ' +
+                                (isImportant ? 'important ' : '') +
+                                (m.completed ? 'completed ' : '')
+                              }
+                              onClick={() =>
+                                handleMaintenanceToggle(
+                                  selectedTree._id,
+                                  m.month,
+                                  m.completed
+                                )
+                              }
+                            >
+                              <td>
+                                <span className="maintenance-month-chip">
+                                  {monthNames[m.month - 1]}
+                                </span>
+                              </td>
+                              <td>
+                                <span className={`maintenance-tag ${tag.className}`}>
+                                  {tag.label}
+                                </span>
+                              </td>
+                              <td className="maintenance-task-cell">{text}</td>
+                              <td style={{ textAlign: 'center' }}>
+                                {m.completed ? (
+                                  <span className="maintenance-check">✅</span>
+                                ) : (
+                                  <span className="maintenance-pending">⏳</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
                 </div>
-              );
-            })()}
+              ) : (
+                <p className="maintenance-empty">Bakım planı girilmemiş.</p>
+              )}
 
-            <h3>Aylık Bakım Planı</h3>
-            {selectedTree.maintenance &&
-              selectedTree.maintenance.length > 0 ? (
-              <div className="maintenance-table-wrapper">
-                <table className="maintenance-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: '100px' }}>Ay</th>
-                      <th style={{ width: '100px' }}>Kategori</th>
-                      <th>Bakım Görevleri</th>
-                      <th style={{ width: '80px', textAlign: 'center' }}>Durum</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedTree.maintenance
-                      .sort((a, b) => a.month - b.month)
-                      .map((m) => {
-                        const text = m.tasks || 'Görev girilmemiş';
-                        const isImportant = /budama|ilaç|sulama|gübre/i.test(text);
-                        const tag = classifyMaintenanceTask(text);
-
-                        return (
-                          <tr
-                            key={m._id || `${selectedTree._id}-${m.month}`}
-                            className={
-                              'maintenance-table-row ' +
-                              (isImportant ? 'important ' : '') +
-                              (m.completed ? 'completed ' : '')
-                            }
-                            onClick={() =>
-                              handleMaintenanceToggle(
-                                selectedTree._id,
-                                m.month,
-                                m.completed
-                              )
-                            }
-                          >
-                            <td>
-                              <span className="maintenance-month-chip">
-                                {monthNames[m.month - 1]}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`maintenance-tag ${tag.className}`}>
-                                {tag.label}
-                              </span>
-                            </td>
-                            <td className="maintenance-task-cell">{text}</td>
-                            <td style={{ textAlign: 'center' }}>
-                              {m.completed ? (
-                                <span className="maintenance-check">✅</span>
-                              ) : (
-                                <span className="maintenance-pending">⏳</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
+              <div className="modal-actions">
+                <button
+                  className="btn danger"
+                  onClick={() => handleDelete(selectedTree._id)}
+                >
+                  Sil
+                </button>
+                <button
+                  className="btn"
+                  onClick={() => handleEdit(selectedTree)}
+                >
+                  Düzenle
+                </button>
+                <button className="btn" onClick={closeDetail}>
+                  Kapat
+                </button>
               </div>
-            ) : (
-              <p className="maintenance-empty">Bakım planı girilmemiş.</p>
-            )}
-
-            <div className="modal-actions">
-              <button
-                className="btn danger"
-                onClick={() => handleDelete(selectedTree._id)}
-              >
-                Sil
-              </button>
-              <button
-                className="btn"
-                onClick={() => handleEdit(selectedTree)}
-              >
-                Düzenle
-              </button>
-              <button className="btn" onClick={closeDetail}>
-                Kapat
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {showForm && (
-        <div className="modal-overlay" onClick={closeForm}>
-          <div
-            className="modal modal-form"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <TreeForm
-              initialTree={editingTree}
-              onSave={handleSave}
-              onCancel={closeForm}
-              token={token}
-            />
+      {
+        showForm && (
+          <div className="modal-overlay" onClick={closeForm}>
+            <div
+              className="modal modal-form"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <TreeForm
+                initialTree={editingTree}
+                onSave={handleSave}
+                onCancel={closeForm}
+                token={token}
+              />
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }
 
@@ -3275,9 +3303,13 @@ function Reminders({ token, month, onChangeMonth }) {
   const [suggestionsVisible, setSuggestionsVisible] = useState(() => {
     try {
       const s = loadSettings();
-      return !!s.reminders.autoOpenSuggestions;
+      // Varsayılan olarak true, ayar varsa ayarı kullan
+      return s.reminders.autoOpenSuggestions !== undefined
+        ? !!s.reminders.autoOpenSuggestions
+        : true;
     } catch {
-      return false;
+      // Ayarlar yüklenemezse varsayılan olarak açık olsun
+      return true;
     }
   }); // 🆕
 
@@ -3471,17 +3503,12 @@ function Reminders({ token, month, onChangeMonth }) {
       fetchHistory(month);
     }
 
-    // Ayarlar: otomatik bakım önerisi paneli açıksa, önerileri de getir
-    try {
-      const s = loadSettings();
-      if (s.reminders.autoOpenSuggestions) {
-        setSuggestionsVisible(true);
-        fetchSuggestions();
-      }
-    } catch (e) {
-      // sessiz geç
+    // Önerileri otomatik olarak getir (varsayılan davranış)
+    // Eğer suggestionsVisible true ise (ki varsayılan olarak öyle), önerileri getir
+    if (suggestionsVisible) {
+      fetchSuggestions();
     }
-  }, [month, historyVisible, fetchTreeReminders, fetchVegReminders, fetchHistory, fetchSuggestions]);
+  }, [month, historyVisible, suggestionsVisible, fetchTreeReminders, fetchVegReminders, fetchHistory, fetchSuggestions]);
   const sendTreeCombinedReminders = async () => {
     setTreeComboSending(true);
     // Eski mesajları temizleyelim ki yeni sonuç net görünsün
@@ -3849,50 +3876,60 @@ function Reminders({ token, month, onChangeMonth }) {
   };
 
   return (
-    <div>
-      <div className="section-header">
-        <h2>Bakım Hatırlatmaları</h2>
-        <select
-          value={month}
-          onChange={(e) => onChangeMonth(Number(e.target.value))}
-          className="month-select"
-        >
-          {monthNames.map((name, idx) => (
-            <option key={name} value={idx + 1}>
-              {name}
-            </option>
-          ))}
-        </select>
+    <div className="reminders-container">
+      {/* Modern Header */}
+      <div className="modern-tab-header reminders" style={{ display: 'flex' }}>
+        <div>
+          <h2>🔔 Bakım Hatırlatmaları</h2>
+          <p className="subtitle">
+            Bahçenizin bakım programını takip edin ve zamanında bildirim alın
+          </p>
+        </div>
+        <div className="modern-select-container">
+          <span style={{ fontSize: '1.2rem' }}>📅</span>
+          <select
+            value={month}
+            onChange={(e) => onChangeMonth(Number(e.target.value))}
+            class="report-month-select">
+            {monthNames.map((name, idx) => (
+              <option key={name} value={idx + 1}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      {/* Otomatik bakım öneri sistemi */}
-      <div className="card">
-        <div className="section-header">
-          <h3>Otomatik Bakım Önerileri</h3>
 
-          <div className="section-actions">
+      {/* Suggestions Panel */}
+      <div className="suggestions-panel">
+        <div className="suggestions-header">
+          <h3>
+            <span className="suggestions-icon">💡</span>
+            Otomatik Bakım Önerileri
+          </h3>
+          <div className="suggestions-actions">
             <button
-              className="btn"
+              className="suggestions-btn"
               type="button"
               onClick={fetchSuggestions}
               disabled={suggestionsLoading}
             >
-              {suggestionsLoading ? 'Öneriler yükleniyor...' : 'Önerileri getir'}
+              {suggestionsLoading ? 'Yükleniyor...' : 'Önerileri Getir'}
             </button>
-
             {suggestions.length > 0 && (
               <button
                 type="button"
-                className="btn secondary-btn"
+                className="suggestions-btn"
                 onClick={() => setSuggestionsVisible((v) => !v)}
               >
-                {suggestionsVisible ? 'Önerileri gizle' : 'Önerileri göster'}
+                {suggestionsVisible ? 'Gizle' : 'Göster'}
               </button>
             )}
           </div>
         </div>
 
         {suggestionsError && (
-          <p className="error-text" style={{ marginTop: 4 }}>
+          <p className="error-text" style={{ marginTop: 12, color: '#fff' }}>
             {suggestionsError}
           </p>
         )}
@@ -3901,9 +3938,11 @@ function Reminders({ token, month, onChangeMonth }) {
           suggestionsVisible &&
           suggestions.length === 0 &&
           !suggestionsError && (
-            <p className="muted" style={{ marginTop: 4 }}>
-              Henüz öneri yok. Ay seç ve &quot;Önerileri getir&quot; düğmesine tıkla.
-            </p>
+            <div className="empty-state" style={{ color: 'rgba(255,255,255,0.9)' }}>
+              <p className="empty-state-text">
+                Henüz öneri yok. "Önerileri Getir" düğmesine tıklayın.
+              </p>
+            </div>
           )}
 
         {suggestionsVisible && suggestions.length > 0 && (
@@ -3918,72 +3957,72 @@ function Reminders({ token, month, onChangeMonth }) {
                   (s.category === 'gelecek' ? 'suggestion-future ' : '')
                 }
               >
-                <div className="suggestion-main">
-                  <span className="suggestion-kind-chip">
-                    {s.kind === 'tree' ? '🌳 Ağaç' : '🥬 Sebze'}
-                  </span>
-                  <span className="suggestion-name">{s.name}</span>
-                  <span className="suggestion-month">{s.month}. ay</span>
-                  {s.important && (
-                    <span className="suggestion-important-chip">ÖNEMLİ</span>
-                  )}
-                </div>
-
-                <div className="suggestion-task-row">
-                  <span className="suggestion-task-type">{s.taskType}</span>
-                  <span className="suggestion-task-text">{s.task}</span>
-                </div>
-
-                <div className="suggestion-footer-row">
-                  <div className="suggestion-category-row">
-                    {s.category === 'geçmiş' && <span>⏰ Geçmiş görev</span>}
-                    {s.category === 'bu-ay' && (
-                      <span>📌 Bu ay yapılması önerilir</span>
-                    )}
-                    {s.category === 'gelecek' && (
-                      <span>🔮 Gelecek ay için hazırlık</span>
+                <div style={{ flex: 1 }}>
+                  <div className="suggestion-main">
+                    <span className="suggestion-kind-chip">
+                      {s.kind === 'tree' ? '🌳 Ağaç' : '🥬 Sebze'}
+                    </span>
+                    <span className="suggestion-name">{s.name}</span>
+                    <span className="suggestion-month">{s.month}. ay</span>
+                    {s.important && (
+                      <span className="suggestion-important-chip">ÖNEMLİ</span>
                     )}
                   </div>
 
-                  <button
-                    type="button"
-                    className="btn suggestion-complete-btn"
-                    onClick={() => handleSuggestionComplete(s)}
-                    disabled={suggestionUpdatingId === s.id}
-                  >
-                    {suggestionUpdatingId === s.id
-                      ? 'İşaretleniyor...'
-                      : 'TAMAMLANDI'}
-                  </button>
+                  <div className="suggestion-task-row">
+                    <span className="suggestion-task-type">{s.taskType}</span>
+                    <span className="suggestion-task-text">{s.task}</span>
+                  </div>
+
+                  <div className="suggestion-footer-row">
+                    <div className="suggestion-category-row">
+                      {s.category === 'geçmiş' && <span>⏰ Geçmiş görev</span>}
+                      {s.category === 'bu-ay' && (
+                        <span>📌 Bu ay yapılması önerilir</span>
+                      )}
+                      {s.category === 'gelecek' && (
+                        <span>🔮 Gelecek ay için hazırlık</span>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="suggestion-complete-btn"
+                      onClick={() => handleSuggestionComplete(s)}
+                      disabled={suggestionUpdatingId === s.id}
+                    >
+                      {suggestionUpdatingId === s.id
+                        ? 'İşaretleniyor...'
+                        : '✓ TAMAMLANDI'}
+                    </button>
+                  </div>
                 </div>
               </li>
             ))}
           </ul>
         )}
-
       </div>
 
-
-      {/* Ağaç bildirim butonları */}
-      {/* Ağaç bildirim butonları */}
-      <div className="card">
+      {/* Trees Section */}
+      <div className="reminders-section">
         <div
-          className="section-header"
+          className="reminders-section-header"
           onClick={() => setTreeNotifyVisible(!treeNotifyVisible)}
-          style={{ cursor: 'pointer' }}
         >
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, marginRight: '10px' }}>{monthNames[month - 1]} ayı için bildirim gönder (Ağaçlar)</h3>
-            <span style={{ fontSize: '1.2rem' }}>{treeNotifyVisible ? '▼' : '▶'}</span>
-          </div>
+          <h3 className="reminders-section-title">
+            <span className="reminders-section-icon">🌳</span>
+            {monthNames[month - 1]} Ağaç Bakımları
+            <span className={`reminders-toggle-icon ${treeNotifyVisible ? 'expanded' : ''}`}>
+              ▶
+            </span>
+          </h3>
           {treeReminders.length > 0 && treeNotifyVisible && (
             <button
-              className="btn primary"
+              className="complete-all-btn"
               onClick={(e) => {
                 e.stopPropagation();
                 handleCompleteAllTrees();
               }}
-              style={{ marginLeft: 'auto', backgroundColor: '#2e7d32' }}
             >
               ✓ Tümünü Tamamla
             </button>
@@ -3992,79 +4031,74 @@ function Reminders({ token, month, onChangeMonth }) {
 
         {treeNotifyVisible && (
           <>
-            <div className="notify-row">
+            <div className="notification-actions">
               <button
-                className="btn"
+                className="notification-btn"
                 onClick={sendTreeEmailReminders}
                 disabled={treeEmailSending}
               >
-                {treeEmailSending
-                  ? 'E-posta gönderiliyor...'
-                  : 'E-posta ile hatırlat'}
+                📧 {treeEmailSending ? 'Gönderiliyor...' : 'E-posta Gönder'}
               </button>
               <button
-                className="btn"
+                className="notification-btn"
                 onClick={sendTreePushReminders}
                 disabled={treePushSending}
               >
-                {treePushSending
-                  ? 'Push bildirimi gönderiliyor...'
-                  : 'Push bildirimi gönder'}
+                🔔 {treePushSending ? 'Gönderiliyor...' : 'Push Bildirim'}
               </button>
-              <div style={{ marginTop: '8px' }}>
-                <button
-                  className="btn"
-                  onClick={sendTreeCombinedReminders}
-                  disabled={treeComboSending}
-                >
-                  {treeComboSending
-                    ? 'E-posta + Push gönderiliyor...'
-                    : 'E-posta + Push birlikte gönder'}
-                </button>
-              </div>
-
-
-              {/* 🔘 sadece önemli görevler kuralı */}
-              <label
-                className="muted"
-                style={{ display: 'block', marginTop: '6px' }}
+              <button
+                className="notification-btn combined"
+                onClick={sendTreeCombinedReminders}
+                disabled={treeComboSending}
               >
-                <input
-                  type="checkbox"
-                  checked={treeOnlyImportant}
-                  onChange={(e) => setTreeOnlyImportant(e.target.checked)}
-                  style={{ marginRight: '6px' }}
-                />
-                Sadece <strong>ÖNEMLİ</strong> görevler için bildir (budama / ilaç / gübre)
-              </label>
-
-              {(treeEmailMessage || treePushMessage) && (
-                <p className="muted">
-                  {treeEmailMessage}{' '}
-                  {treePushMessage && ` / ${treePushMessage}`}
-                </p>
-              )}
+                ⚡ {treeComboSending ? 'Gönderiliyor...' : 'E-posta + Push Birlikte'}
+              </button>
             </div>
 
-            <h3 style={{ marginTop: '20px' }}>Ağaçlar</h3>
-            {treeLoading && <p>Yükleniyor...</p>}
-            {treeError && <p className="error-text">{treeError}</p>}
-            {!treeLoading && treeReminders.length === 0 && (
-              <p>{monthNames[month - 1]} ayı için planlanmış ağaç bakımı yok.</p>
+            <label className="notification-checkbox">
+              <input
+                type="checkbox"
+                checked={treeOnlyImportant}
+                onChange={(e) => setTreeOnlyImportant(e.target.checked)}
+              />
+              <span>
+                Sadece <strong>ÖNEMLİ</strong> görevler için bildir (budama / ilaç / gübre)
+              </span>
+            </label>
+
+            {(treeEmailMessage || treePushMessage) && (
+              <div className="notification-message">
+                {treeEmailMessage} {treePushMessage && ` / ${treePushMessage}`}
+              </div>
             )}
 
-            <div className="reminders-grid">
+            {treeLoading && <div className="loading-spinner">🔄 Yükleniyor...</div>}
+            {treeError && <p className="error-text">{treeError}</p>}
+            {!treeLoading && treeReminders.length === 0 && (
+              <div className="empty-state">
+                <div className="empty-state-icon">🌳</div>
+                <p className="empty-state-text">
+                  {monthNames[month - 1]} ayı için planlanmış ağaç bakımı yok.
+                </p>
+              </div>
+            )}
+
+            <div className="enhanced-reminders-grid">
               {treeReminders.map((item) => (
                 <div
                   key={item.treeId}
-                  className="card reminder-card-tree"
+                  className="enhanced-reminder-card"
                   onClick={() => handleTreeCardClick(item.treeId)}
                 >
-                  <div className="card-header-row">
-                    <h3>{item.name}</h3>
-                    <span className="badge">Adet: {item.count}</span>
+                  <div className="reminder-card-header">
+                    <h3 className="reminder-card-title">
+                      🌳 {item.name}
+                    </h3>
+                    <span className="reminder-card-count">
+                      {item.count} adet
+                    </span>
                   </div>
-                  <ul className="maintenance-list">
+                  <ul className="enhanced-maintenance-list">
                     {item.tasks.map((t, idx) => {
                       const tag = classifyMaintenanceTask(t || '');
                       const isImportant = /budama|ilaç|sulama|gübre/i.test(t || '');
@@ -4073,7 +4107,7 @@ function Reminders({ token, month, onChangeMonth }) {
                         <li
                           key={idx}
                           className={
-                            'maintenance-item ' + (isImportant ? 'important ' : '')
+                            'enhanced-maintenance-item ' + (isImportant ? 'important ' : '')
                           }
                         >
                           <span className={`maintenance-tag ${tag.className}`}>
@@ -4084,7 +4118,6 @@ function Reminders({ token, month, onChangeMonth }) {
                       );
                     })}
                   </ul>
-
                 </div>
               ))}
             </div>
@@ -4092,29 +4125,26 @@ function Reminders({ token, month, onChangeMonth }) {
         )}
       </div>
 
-
-
-      <hr style={{ margin: '24px 0' }} />
-
-      {/* Sebze bildirim butonları */}
-      <div className="card">
+      {/* Vegetables Section */}
+      <div className="reminders-section">
         <div
-          className="section-header"
+          className="reminders-section-header"
           onClick={() => setVegNotifyVisible(!vegNotifyVisible)}
-          style={{ cursor: 'pointer' }}
         >
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, marginRight: '10px' }}>{monthNames[month - 1]} ayı için bildirim gönder (Sebzeler)</h3>
-            <span style={{ fontSize: '1.2rem' }}>{vegNotifyVisible ? '▼' : '▶'}</span>
-          </div>
+          <h3 className="reminders-section-title">
+            <span className="reminders-section-icon">🥬</span>
+            {monthNames[month - 1]} Sebze Bakımları
+            <span className={`reminders-toggle-icon ${vegNotifyVisible ? 'expanded' : ''}`}>
+              ▶
+            </span>
+          </h3>
           {vegReminders.length > 0 && vegNotifyVisible && (
             <button
-              className="btn primary"
+              className="complete-all-btn"
               onClick={(e) => {
                 e.stopPropagation();
                 handleCompleteAllVeggies();
               }}
-              style={{ marginLeft: 'auto', backgroundColor: '#2e7d32' }}
             >
               ✓ Tümünü Tamamla
             </button>
@@ -4123,75 +4153,74 @@ function Reminders({ token, month, onChangeMonth }) {
 
         {vegNotifyVisible && (
           <>
-            <div className="notify-row">
+            <div className="notification-actions">
               <button
-                className="btn"
+                className="notification-btn"
                 onClick={sendVegEmailReminders}
                 disabled={vegEmailSending}
               >
-                {vegEmailSending
-                  ? 'Sebze e-postası gönderiliyor...'
-                  : 'Sebzeler için e-posta'}
+                📧 {vegEmailSending ? 'Gönderiliyor...' : 'E-posta Gönder'}
               </button>
               <button
-                className="btn"
+                className="notification-btn"
                 onClick={sendVegPushReminders}
                 disabled={vegPushSending}
               >
-                {vegPushSending
-                  ? 'Sebze push bildirimi gönderiliyor...'
-                  : 'Sebzeler için push'}
+                🔔 {vegPushSending ? 'Gönderiliyor...' : 'Push Bildirim'}
               </button>
-              {/* 🆕 Karma buton */}
-              <div style={{ marginTop: '8px' }}>
-                <button
-                  className="btn"
-                  onClick={sendVegCombinedReminders}
-                  disabled={vegComboSending}
-                >
-                  {vegComboSending
-                    ? 'E-posta + Push gönderiliyor...'
-                    : 'E-posta + Push birlikte gönder'}
-                </button>
-              </div>
-              {/* 🆕 Sebze kuralı */}
-              <label className="muted" style={{ display: 'block', marginTop: '6px' }}>
-                <input
-                  type="checkbox"
-                  checked={vegOnlyImportant}
-                  onChange={(e) => setVegOnlyImportant(e.target.checked)}
-                  style={{ marginRight: '6px' }}
-                />
-                Sadece <strong>ÖNEMLİ</strong> sebze görevleri için bildir (budama / ilaç / gübre)
-              </label>
-
-              {(vegEmailMessage || vegPushMessage) && (
-                <p className="muted">
-                  {vegEmailMessage}{' '}
-                  {vegPushMessage && ` / ${vegPushMessage}`}
-                </p>
-              )}
+              <button
+                className="notification-btn combined"
+                onClick={sendVegCombinedReminders}
+                disabled={vegComboSending}
+              >
+                ⚡ {vegComboSending ? 'Gönderiliyor...' : 'E-posta + Push Birlikte'}
+              </button>
             </div>
 
-            <h3 style={{ marginTop: '20px' }}>Sebzeler</h3>
-            {vegLoading && <p>Yükleniyor...</p>}
-            {vegError && <p className="error-text">{vegError}</p>}
-            {!vegLoading && vegReminders.length === 0 && (
-              <p>{monthNames[month - 1]} ayı için planlanmış sebze bakımı yok.</p>
+            <label className="notification-checkbox">
+              <input
+                type="checkbox"
+                checked={vegOnlyImportant}
+                onChange={(e) => setVegOnlyImportant(e.target.checked)}
+              />
+              <span>
+                Sadece <strong>ÖNEMLİ</strong> görevler için bildir (budama / ilaç / gübre)
+              </span>
+            </label>
+
+            {(vegEmailMessage || vegPushMessage) && (
+              <div className="notification-message">
+                {vegEmailMessage} {vegPushMessage && ` / ${vegPushMessage}`}
+              </div>
             )}
 
-            <div className="reminders-grid">
+            {vegLoading && <div className="loading-spinner">🔄 Yükleniyor...</div>}
+            {vegError && <p className="error-text">{vegError}</p>}
+            {!vegLoading && vegReminders.length === 0 && (
+              <div className="empty-state">
+                <div className="empty-state-icon">🥬</div>
+                <p className="empty-state-text">
+                  {monthNames[month - 1]} ayı için planlanmış sebze bakımı yok.
+                </p>
+              </div>
+            )}
+
+            <div className="enhanced-reminders-grid">
               {vegReminders.map((item) => (
                 <div
                   key={item.vegetableId}
-                  className="card reminder-card-tree"
+                  className="enhanced-reminder-card"
                   onClick={() => handleVegCardClick(item.vegetableId)}
                 >
-                  <div className="card-header-row">
-                    <h3>{item.name}</h3>
-                    <span className="badge">Adet: {item.count}</span>
+                  <div className="reminder-card-header">
+                    <h3 className="reminder-card-title">
+                      🥬 {item.name}
+                    </h3>
+                    <span className="reminder-card-count">
+                      {item.count} adet
+                    </span>
                   </div>
-                  <ul className="maintenance-list">
+                  <ul className="enhanced-maintenance-list">
                     {item.tasks.map((t, idx) => {
                       const tag = classifyMaintenanceTask(t || '');
                       const isImportant = /budama|ilaç|sulama|gübre/i.test(t || '');
@@ -4200,7 +4229,7 @@ function Reminders({ token, month, onChangeMonth }) {
                         <li
                           key={idx}
                           className={
-                            'maintenance-item ' + (isImportant ? 'important ' : '')
+                            'enhanced-maintenance-item ' + (isImportant ? 'important ' : '')
                           }
                         >
                           <span className={`maintenance-tag ${tag.className}`}>
@@ -4211,31 +4240,29 @@ function Reminders({ token, month, onChangeMonth }) {
                       );
                     })}
                   </ul>
-
                 </div>
               ))}
             </div>
           </>
         )}
-
       </div>
 
-
-
-      <hr style={{ margin: '32px 0' }} />
-
-      {/* GEÇMİŞ / TAMAMLANAN GÖREVLER BÖLÜMÜ */}
-      <div className="card" style={{ backgroundColor: '#f9f9f9', border: '1px dashed #ccc' }}>
-        <div className="section-header" style={{ cursor: 'pointer' }} onClick={() => {
-          const next = !historyVisible;
-          setHistoryVisible(next);
-          if (next) fetchHistory(month);
-        }}>
-          <h3>AYLIK GEÇMİŞ BAKIM LİSTESİ (Ağaç + Sebze)</h3>
+      {/* History Section */}
+      <div className="history-section">
+        <div
+          className="history-header"
+          onClick={() => {
+            const next = !historyVisible;
+            setHistoryVisible(next);
+            if (next) fetchHistory(month);
+          }}
+        >
+          <h3 className="history-title">
+            📜 Aylık Geçmiş Bakım Listesi
+          </h3>
           <button
             type="button"
-            className="btn"
-            style={{ fontSize: '0.9rem', padding: '4px 12px' }}
+            className="history-toggle-btn"
             onClick={(e) => {
               e.stopPropagation();
               const next = !historyVisible;
@@ -4243,62 +4270,61 @@ function Reminders({ token, month, onChangeMonth }) {
               if (next) fetchHistory(month);
             }}
           >
-            {historyVisible ? 'Listeyi Gizle' : 'Listeyi Getir'}
+            {historyVisible ? '👁️ Gizle' : '👁️ Göster'}
           </button>
         </div>
 
         {historyVisible && (
-          <div style={{ marginTop: '16px' }}>
-
-            {historyLoading && <p>Yükleniyor...</p>}
+          <div style={{ marginTop: '20px' }}>
+            {historyLoading && <div className="loading-spinner">🔄 Yükleniyor...</div>}
             {!historyLoading && historyData.length === 0 && (
-              <p className="muted">Bu ayda henüz tamamlanan bir görev yok.</p>
+              <div className="empty-state">
+                <div className="empty-state-icon">📋</div>
+                <p className="empty-state-text">
+                  Bu ayda henüz tamamlanan bir görev yok.
+                </p>
+              </div>
             )}
 
             {historyData.length > 0 && (
               <>
-
-
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+                <div className="history-actions">
                   {historyData.some((i) => i.type === 'tree') && (
                     <button
-                      className="btn small"
+                      className="history-undo-btn trees"
                       onClick={handleUndoAllTrees}
                       disabled={historyLoading}
-                      style={{ backgroundColor: '#795548', color: 'white' }}
                     >
                       🌳 Ağaçları Geri Al
                     </button>
                   )}
                   {historyData.some((i) => i.type === 'vegetable') && (
                     <button
-                      className="btn small"
+                      className="history-undo-btn vegetables"
                       onClick={handleUndoAllVeggies}
                       disabled={historyLoading}
-                      style={{ backgroundColor: '#2e7d32', color: 'white' }}
                     >
                       🥬 Sebzeleri Geri Al
                     </button>
                   )}
                 </div>
 
-
-
-                <div className="items-list">
+                <div className="history-list">
                   {historyData.map((item, idx) => (
-                    <div key={idx} className="item-row" style={{ opacity: 0.8 }}>
-                      <div>
-                        {item.type === 'tree' ? '🌳' : '🥬'} <strong>{item.name}</strong>
-                        <div style={{ fontSize: '0.85rem', color: '#555', marginTop: '4px' }}>
+                    <div key={idx} className="history-item">
+                      <div className="history-item-content">
+                        <div className="history-item-name">
+                          {item.type === 'tree' ? '🌳' : '🥬'} {item.name}
+                        </div>
+                        <div className="history-item-tasks">
                           {item.tasks.join(', ')}
                         </div>
                       </div>
                       <button
-                        className="btn small"
+                        className="history-revert-btn"
                         onClick={() => handleHistoryToggle(item)}
-                        style={{ marginLeft: 'auto', backgroundColor: '#9e9e9e', color: 'white' }}
                       >
-                        Geri Al ↺
+                        ↺ Geri Al
                       </button>
                     </div>
                   ))}
@@ -4308,7 +4334,6 @@ function Reminders({ token, month, onChangeMonth }) {
           </div>
         )}
       </div>
-
     </div >
   );
 }
@@ -4420,66 +4445,68 @@ function CalendarView({ token, onSelectMonth }) {
 
   return (
     <div className="calendar-page">
-      <div className="calendar-section">
-        <h2>Yıllık Bakım Takvimi (Ağaç + Sebze)</h2>
-        <p className="muted" style={{ marginBottom: '4px' }}>
+      <div className="modern-tab-header calendar">
+        <h2>📅 Yıllık Bakım Takvimi</h2>
+        <p className="subtitle">
           Her kartta ilgili ay için toplam bakım ilerlemesini ve
           ağaç / sebze kırılımını görebilirsin.
+
+
+
+
         </p>
-        <p className="muted" style={{ fontSize: '0.8rem' }}>
-          Kartlara tıklayınca o ayın detaylı hatırlatma ekranına geçersin.
-        </p>
+      </div><div className="month-card"> Not : Kartlara tıklayınca o ayın detaylı hatırlatma ekranına geçersin.
+      </div>
+      <div className="calendar-grid">
+        {combinedStats.map((m) => {
+          const isCurrent = m.index === currentMonthIndex;
+          const isEmpty = m.total === 0;
 
-        <div className="calendar-grid">
-          {combinedStats.map((m) => {
-            const isCurrent = m.index === currentMonthIndex;
-            const isEmpty = m.total === 0;
-
-            return (
-              <div
-                key={m.index}
-                className={
-                  'month-card ' +
-                  (isEmpty ? 'month-card-empty ' : '') +
-                  (isCurrent ? 'month-card-current ' : '')
-                }
-                onClick={() => onSelectMonth(m.index)}
-              >
-                <div className="month-card-header">
-                  <span className="month-card-name">{m.name}</span>
-                  {isCurrent && (
-                    <span className="month-card-badge">Bu ay</span>
-                  )}
-                </div>
-
-                {isEmpty ? (
-                  <p className="month-card-text">Planlı bakım yok.</p>
-                ) : (
-                  <>
-                    <p className="month-card-text">
-                      Toplam görev: {m.done}/{m.total}
-                    </p>
-                    <p className="month-card-subline">
-                      🌳 {m.tree.done}/{m.tree.total} &nbsp;·&nbsp; 🥬{' '}
-                      {m.veg.done}/{m.veg.total}
-                    </p>
-                    <div className="month-card-progress-bar">
-                      <div
-                        className="month-card-progress-fill"
-                        style={{ width: `${m.percent}%` }}
-                      />
-                    </div>
-                    <p className="month-card-percent">
-                      %{m.percent} tamamlandı
-                    </p>
-                  </>
+          return (
+            <div
+              key={m.index}
+              className={
+                'month-card ' +
+                (isEmpty ? 'month-card-empty ' : '') +
+                (isCurrent ? 'month-card-current ' : '')
+              }
+              onClick={() => onSelectMonth(m.index)}
+            >
+              <div className="month-card-header">
+                <span className="month-card-name">{m.name}</span>
+                {isCurrent && (
+                  <span className="month-card-badge">Bu ay</span>
                 )}
               </div>
-            );
-          })}
-        </div>
+
+              {isEmpty ? (
+                <p className="month-card-text">Planlı bakım yok.</p>
+              ) : (
+                <>
+                  <p className="month-card-text">
+                    Toplam görev: {m.done}/{m.total}
+                  </p>
+                  <p className="month-card-subline">
+                    🌳 {m.tree.done}/{m.tree.total} &nbsp;·&nbsp; 🥬{' '}
+                    {m.veg.done}/{m.veg.total}
+                  </p>
+                  <div className="month-card-progress-bar">
+                    <div
+                      className="month-card-progress-fill"
+                      style={{ width: `${m.percent}%` }}
+                    />
+                  </div>
+                  <p className="month-card-percent">
+                    %{m.percent} tamamlandı
+                  </p>
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
+
   );
 }
 
@@ -4969,6 +4996,19 @@ function Home({ token }) {
                   <div className="garden-stat-value">{veggies.reduce((sum, v) => sum + (v.count || 0), 0)}</div>
                 </div>
               </div>
+
+              <div className="garden-general-summary">
+                <p>
+                  Bahçenizde toplam <strong>{trees.reduce((s, t) => s + (t.count || 0), 0) + veggies.reduce((s, v) => s + (v.count || 0), 0)}</strong> bitki
+                  ({trees.reduce((s, t) => s + (t.count || 0), 0)} ağaç, {veggies.reduce((s, v) => s + (v.count || 0), 0)} sebze) bakımı yapılıyor.
+                  Bu ay yapmanız gereken işlerin <strong>%{overallPercent}</strong> kadarını tamamladınız.
+                  <br />
+                  {overallPercent === 100 ? 'Harika iş, bu ayın keyfini çıkarın! 🌟' : 'Bakımlara devam edin! 💪'}
+                </p>
+                <p className="season-note">
+                  <em>{season.name} dönemindesiniz: {season.tip}</em>
+                </p>
+              </div>
             </>
           )}
         </div>
@@ -5281,7 +5321,7 @@ function Settings({ token }) {
       console.error('Ayar kaydedilemedi:', err);
       setSaving(false);
     }
-  }, [settings, token, setSettings, setSaving, applySettingsImmediately]);
+  }, [token, setSettings, setSaving, applySettingsImmediately]);
 
   const handleToggle = (path) => {
     if (!settings) return;
@@ -5591,16 +5631,16 @@ function Settings({ token }) {
 
   return (
     <div className="settings-page">
-      <div className="settings-header-row">
+      <div className="modern-tab-header settings">
         <div>
-          <h2>Ayarlar</h2>
-          <p className="muted">
+          <h2>⚙️ Ayarlar</h2>
+          <p className="subtitle">
             Uygulamanın tüm ayarlarını burada özelleştirebilirsin. Ayarlar veritabanında saklanır ve tüm cihazlarında senkronize olur.
           </p>
         </div>
-        {saving && <span className="settings-status">Kaydedildi ✓</span>}
-      </div>
 
+      </div>
+      {saving && <span className="settings-status">Kaydedildi ✓</span>}
       <div className="settings-grid">
         {/* Profil & Kişiselleştirme */}
         <section className="settings-section settings-section-wide">
@@ -5858,22 +5898,7 @@ function Settings({ token }) {
             </select>
           </div>
 
-          <div className="settings-item">
-            <div>
-              <div className="settings-item-title">Grafikler varsayılan açık</div>
-              <div className="settings-item-desc">
-                Rapor sayfasında grafikler başlangıçta açık olsun
-              </div>
-            </div>
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={settings.appearance.chartsDefaultOpen}
-                onChange={() => handleToggle('appearance.chartsDefaultOpen')}
-              />
-              <span className="slider" />
-            </label>
-          </div>
+
         </section>
 
 
@@ -6595,7 +6620,7 @@ function Reports({ token }) {
   const [historyVisible, setHistoryVisible] = useState(false); // 🆕 Added for toggle
 
   // 📊 Grafik görünümü
-  const [showCharts, setShowCharts] = useState(true);
+  const [showCharts, setShowCharts] = useState(false);
 
   // ====== AYLIK RAPOR OLUŞTURMA ======
   const generateReport = async () => {
@@ -6604,13 +6629,72 @@ function Reports({ token }) {
     setReport(null);
 
     try {
-      const res = await fetch(`${API_URL}/reports/monthly?month=${month}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // Eğer month = 0 ise (Tüm Aylar), 12 ay için rapor topla
+      if (month === 0) {
+        // const monthlyReports = [];
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || 'Rapor oluşturulamadı.');
-      setReport(data);
+        // 12 ay için paralel fetch
+        const promises = [];
+        for (let m = 1; m <= 12; m++) {
+          promises.push(
+            fetch(`${API_URL}/reports/monthly?month=${m}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+              .then(res => res.json())
+              .then(data => ({ month: m, ...data }))
+              .catch(() => null)
+          );
+        }
+
+        const results = await Promise.all(promises);
+
+        // Başarılı sonuçları topla
+        const validReports = results.filter(r => r && r.tree && r.veg);
+
+        if (validReports.length === 0) {
+          throw new Error('Hiçbir ay için rapor bulunamadı.');
+        }
+
+        // Tüm ayların toplamını hesapla
+        const totalTree = validReports.reduce((sum, r) => ({
+          total: sum.total + r.tree.total,
+          done: sum.done + r.tree.done,
+          remaining: sum.remaining + r.tree.remaining
+        }), { total: 0, done: 0, remaining: 0 });
+
+        const totalVeg = validReports.reduce((sum, r) => ({
+          total: sum.total + r.veg.total,
+          done: sum.done + r.veg.done,
+          remaining: sum.remaining + r.veg.remaining
+        }), { total: 0, done: 0, remaining: 0 });
+
+        const totalAll = {
+          total: totalTree.total + totalVeg.total,
+          done: totalTree.done + totalVeg.done,
+          remaining: totalTree.remaining + totalVeg.remaining
+        };
+
+        // Yüzdeleri hesapla
+        totalTree.percent = totalTree.total > 0 ? Math.round((totalTree.done / totalTree.total) * 100) : 0;
+        totalVeg.percent = totalVeg.total > 0 ? Math.round((totalVeg.done / totalVeg.total) * 100) : 0;
+        totalAll.percent = totalAll.total > 0 ? Math.round((totalAll.done / totalAll.total) * 100) : 0;
+
+        setReport({
+          tree: totalTree,
+          veg: totalVeg,
+          total: totalAll,
+          monthName: 'Tüm Aylar (Yıllık Özet)'
+        });
+      } else {
+        // Tek ay için normal rapor
+        const res = await fetch(`${API_URL}/reports/monthly?month=${month}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || 'Rapor oluşturulamadı.');
+        setReport(data);
+      }
     } catch (err) {
       setError(err.message || 'Rapor alınırken hata oluştu.');
     } finally {
@@ -6786,39 +6870,48 @@ function Reports({ token }) {
 
   return (
     <div className="page reports-page">
-      <h2>Raporlar</h2>
+      <div className="modern-tab-header reports">
+        <h2>📊 Raporlar</h2>
+        <p className="subtitle">İstatistikler, analizler ve raporlama</p>
+      </div>
 
       {/* ===================== AYLIK RAPOR ===================== */}
       <div className="card report-card">
         <div className="section-header report-header">
           <div>
-            <h3>Aylık Özet Raporu</h3>
+            <h3>
+              <span className="modern-section-icon" style={{ fontSize: '1.2rem', marginRight: '8px' }}>📉</span>
+              Aylık Özet Raporu
+            </h3>
             <p className="muted" style={{ marginTop: 4 }}>
               Seçtiğin ay için ağaç ve sebze bakımlarının kısa özeti.
             </p>
           </div>
 
           <div className="report-header-right">
-            <select
-              value={month}
-              onChange={(e) => setMonth(Number(e.target.value))}
-              className="report-month-select"
-            >
-              <option value={0}>Tüm Aylar</option>
-              {monthNames.map((m, idx) => (
-                <option key={idx + 1} value={idx + 1}>
-                  {idx + 1}. {m}
-                </option>
-              ))}
-            </select>
+            <div className="modern-select-container">
+              <span style={{ fontSize: '1.2rem' }}>📅</span>
+              <select
+                value={month}
+                onChange={(e) => setMonth(Number(e.target.value))}
+                className="report-month-select"
+              >
+                <option value={0}>Tüm Aylar (Yıllık Özet)</option>
+                {monthNames.map((m, idx) => (
+                  <option key={idx + 1} value={idx + 1}>
+                    {idx + 1}. {m}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <button
               className="btn"
               type="button"
-              onClick={generateReport}
+              onClick={report ? () => setReport(null) : generateReport}
               disabled={loading}
             >
-              {loading ? 'Hazırlanıyor...' : 'Raporu Oluştur'}
+              {loading ? 'Hazırlanıyor...' : (report ? 'Raporu Gizle' : 'Raporu Oluştur')}
             </button>
           </div>
         </div>
@@ -6925,7 +7018,10 @@ function Reports({ token }) {
       {/* ===================== GEÇMİŞ RAPOR ===================== */}
       <div className="card report-card">
         <div className="section-header">
-          <h3>GEÇMİŞ BAKIM RAPORU (Ağaç + Sebze)</h3>
+          <h3>
+            <span className="modern-section-icon" style={{ fontSize: '1.2rem', marginRight: '8px' }}>🕰️</span>
+            GEÇMİŞ BAKIM RAPORU (Ağaç + Sebze)
+          </h3>
           <button
             className="btn"
             type="button"
@@ -7508,11 +7604,23 @@ function App() {
         )}
         {tab === 'trees' && (
           <div className="tab-panel">
+            <div className="modern-tab-header" style={{ background: 'linear-gradient(135deg, #92400e 0%, #78350f 100%)' }}>
+              <div>
+                <h2>🌳 Ağaçlar</h2>
+                <p className="subtitle">Bahçenizdeki ağaçları görüntüleyin, ekleyin ve yönetin</p>
+              </div>
+            </div>
             <TreeManager token={token} />
           </div>
         )}
         {tab === 'vegetables' && (
           <div className="tab-panel">
+            <div className="modern-tab-header" style={{ background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)' }}>
+              <div>
+                <h2>🥬 Sebzeler</h2>
+                <p className="subtitle">Bahçenizdeki sebzeleri görüntüleyin, ekleyin ve yönetin</p>
+              </div>
+            </div>
             <VegetableManager token={token} />
           </div>
         )}
@@ -7549,7 +7657,13 @@ function App() {
 
         {/* 🗺️ HARİTA TAB İÇERİĞİ */}
         {tab === 'map' && (
-          <div className="tab-panel map-view" style={{ overflow: 'hidden', height: 'calc(100vh - 80px)' }}>
+          <div className="tab-panel map-view" style={{ overflow: ' ', height: 'calc(100vh - 80px)' }}>
+            <div className="modern-tab-header" style={{ marginBottom: '16px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+              <div>
+                <h2>🗺️ Bahçe Haritası</h2>
+                <p className="subtitle">Ağaçlarınızı ve sebzelerinizi harita üzerinde görüntüleyin ve yönetin</p>
+              </div>
+            </div>
             <GardenMapTab token={token} />
           </div>
         )}
@@ -7683,7 +7797,7 @@ function App() {
                 const whatsappNumber = loadSettings().profile.siteWhatsApp;
                 if (whatsappNumber && whatsappNumber.trim()) {
                   // Numaradan boşluk, tire vb. karakterleri temizle
-                  const cleanNumber = whatsappNumber.replace(/[\s\-\(\)]/g, '');
+                  const cleanNumber = whatsappNumber.replace(/[\s\-()]/g, '');
                   // Önceden tanımlı mesaj
                   const message = encodeURIComponent(`Merhaba! ${loadSettings().profile.siteTitle || 'Akıllı Bahçe'} hakkında bilgi almak istiyorum.`);
                   return (
@@ -7698,9 +7812,9 @@ function App() {
                   );
                 } else {
                   return (
-                    <a href="#" className="chat-option" onClick={(e) => { e.preventDefault(); alert('WhatsApp numarası ayarlardan eklenebilir! (Ayarlar → Profil & Kişiselleştirme)'); }}>
+                    <button className="chat-option" onClick={(e) => { e.preventDefault(); alert('WhatsApp numarası ayarlardan eklenebilir! (Ayarlar → Profil & Kişiselleştirme)'); }}>
                       📱 WhatsApp
-                    </a>
+                    </button>
                   );
                 }
               })()}
